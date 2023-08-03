@@ -26,6 +26,13 @@
 static PkBackendSpawn *spawn;
 
 void
+pk_backend_repair_system (PkBackend *backend, PkBackendJob *job, PkBitfield transaction_flags)
+{
+    pk_backend_spawn_helper (spawn, job, "pisiBackend.py", "repair_system", NULL);
+    pk_backend_job_finished (job);
+}
+
+void
 pk_backend_start_job (PkBackend *backend, PkBackendJob *job)
 {
     if (pk_backend_spawn_is_busy (spawn)) {
