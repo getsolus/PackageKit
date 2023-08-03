@@ -149,6 +149,24 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             # and arguments!
             self.__get_package(pkg.package)
 
+    def get_categories(self):
+        self.status(STATUS_QUERY)
+        self.allow_cancel(True)
+        categories = self.componentdb.list_components()
+        categories.sort()
+
+        for p in categories:
+            component = self.componentdb.get_component(p)
+
+            #group_img = "/usr/share/icons/Adwaita/symbolic/categories/applications-%s-symbolic.svg" % (component.name)
+            #if os.path.isfile(group_img) and os.access(group_img, os.R_OK):
+            #    icon = group_img
+            #else:
+            #    icon = "image-missing"
+
+            cat_id = component.name  # same thing
+            self.category("", cat_id, component.name, unicode(component.summary), "image-missing")
+
     def get_details(self, package_ids):
         """ Prints a detailed description for a given package """
         self.allow_cancel(True)
