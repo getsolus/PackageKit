@@ -167,6 +167,14 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             cat_id = component.name  # same thing
             self.category("", cat_id, component.name, unicode(component.summary), "image-missing")
 
+    def repair_system(self, transaction_flags):
+        '''
+        Implement the {backend}-repair-system functionality
+        Needed to be implemented in a sub class
+        '''
+        self.error(ERROR_NOT_SUPPORTED, "This function is not implemented in this backend",
+                   exit=False)
+
     def get_details(self, package_ids):
         """ Prints a detailed description for a given package """
         self.allow_cancel(True)
