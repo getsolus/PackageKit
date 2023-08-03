@@ -147,6 +147,12 @@ pk_backend_get_details (PkBackend *backend, PkBackendJob *job, gchar **package_i
 }
 
 void
+pk_backend_get_distro_upgrades (PkBackend *backend, PkBackendJob *job)
+{
+	pk_backend_job_finished (job);
+}
+
+void
 pk_backend_get_files (PkBackend *backend, PkBackendJob *job, gchar **package_ids)
 {
     gchar *package_ids_temp;
