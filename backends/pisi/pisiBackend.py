@@ -356,7 +356,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
 
         # FIXME: install progress
         self.allow_cancel(False)
-        self.percentage(None)
+        self.percentage(0)
 
         def progress_cb(**kw):
             self.percentage(int(kw['percent']))
@@ -375,6 +375,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             # Force needed?
             self.error(ERROR_PACKAGE_ALREADY_INSTALLED, e)
         pisi.api.set_userinterface(self.saved_ui)
+        self.percentage(100)
 
     def _report_all_for_package(self, package, remove=False):
         """ Report all deps for the given package """
@@ -405,7 +406,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         """ Installs given package into system"""
         # FIXME: fetch/install progress
         self.allow_cancel(False)
-        self.percentage(None)
+        self.percentage(0)
 
         packages = list()
 
@@ -436,6 +437,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         except pisi.Error, e:
             self.error(ERROR_UNKNOWN, e)
         pisi.api.set_userinterface(self.saved_ui)
+        self.percentage(100)
 
     def refresh_cache(self, force):
         """ Updates repository indexes """
@@ -458,7 +460,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                         allowdeps, autoremove):
         """ Removes given package from system"""
         self.allow_cancel(False)
-        self.percentage(None)
+        self.percentage(0)
         # TODO: use autoremove
         packages = list()
 
@@ -487,6 +489,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         except pisi.Error, e:
             self.error(ERROR_CANNOT_REMOVE_SYSTEM_PACKAGE, e)
         pisi.api.set_userinterface(self.saved_ui)
+        self.percentage(100)
 
     def repo_set_data(self, repo_id, parameter, value):
         """ Sets a parameter for the repository specified """
