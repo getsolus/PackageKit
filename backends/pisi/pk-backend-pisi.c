@@ -113,6 +113,12 @@ pk_backend_download_packages (PkBackend *backend, PkBackendJob *job, gchar **pac
 }
 
 void
+pk_backend_get_categories (PkBackend *backend, PkBackendJob *job)
+{
+    pk_backend_spawn_helper (spawn, job, "pisiBackend.py", "get-categories", NULL);
+}
+
+void
 pk_backend_depends_on (PkBackend *backend, PkBackendJob *job, PkBitfield filters, gchar **package_ids, gboolean recursive)
 {
     gchar *filters_text;
@@ -188,7 +194,7 @@ pk_backend_install_packages (PkBackend *backend, PkBackendJob *job, PkBitfield t
     /* send the complete list as stdin */
     package_ids_temp = pk_package_ids_to_string (package_ids);
     transaction_flags_temp = pk_transaction_flag_bitfield_to_string (transaction_flags);
-    
+
     pk_backend_spawn_helper (spawn, job, "pisiBackend.py", "install-packages", transaction_flags_temp, package_ids_temp, NULL);
     g_free (package_ids_temp);
     g_free (transaction_flags_temp);
@@ -203,7 +209,7 @@ pk_backend_install_files (PkBackend *backend, PkBackendJob *job, PkBitfield tran
     /* send the complete list as stdin */
     package_ids_temp = g_strjoinv (PK_BACKEND_SPAWN_FILENAME_DELIM, full_paths);
     transaction_flags_temp = pk_transaction_flag_bitfield_to_string (transaction_flags);
-    
+
     pk_backend_spawn_helper (spawn, job, "pisiBackend.py", "install-files", transaction_flags_temp, package_ids_temp, NULL);
     g_free (package_ids_temp);
     g_free (transaction_flags_temp);
@@ -243,7 +249,7 @@ pk_backend_remove_packages (PkBackend *backend, PkBackendJob *job,
         pk_backend_bool_to_string (allow_deps),
         pk_backend_bool_to_string (autoremove),
         NULL);
-        
+
     g_free (transaction_flags_temp);
     g_free (package_ids_temp);
 }
@@ -312,7 +318,7 @@ pk_backend_update_packages (PkBackend *backend, PkBackendJob *job, PkBitfield tr
     /* send the complete list as stdin */
     package_ids_temp = pk_package_ids_to_string (package_ids);
     transaction_flags_temp = pk_transaction_flag_bitfield_to_string (transaction_flags);
-    
+
     pk_backend_spawn_helper (spawn, job, "pisiBackend.py", "update-packages", transaction_flags_temp, package_ids_temp, NULL);
     g_free (package_ids_temp);
     g_free (transaction_flags_temp);
@@ -323,9 +329,9 @@ pk_backend_update_system (PkBackend *backend, PkBackendJob *job, PkBitfield tran
 {
     gchar *transaction_flags_temp;
     transaction_flags_temp = pk_transaction_flag_bitfield_to_string (transaction_flags);
-    
+
     pk_backend_spawn_helper (spawn, job, "pisiBackend.py", "update-system", transaction_flags_temp, NULL);
-    
+
     g_free (transaction_flags_temp);
 }
 
