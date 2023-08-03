@@ -225,10 +225,34 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         else:
             self.error(ERROR_PACKAGE_NOT_FOUND, "Package must be installed to get file list")
 
+    def get_packages(self, filters):
+        self.status(STATUS_QUERY)
+        self.allow_cancel(True)
+        self.percentage(None)
+
+        packages = list()
+        if FILTER_INSTALLED in filters:
+            packages = self.installdb.list_installed()
+        elif FILTER_NOT_INSTALLED in filters:
+            installed = self.installdb.list_installed()
+            available = self.packagedb.list_packages(None)
+            cmpInstalled = Counter(installed)
+            cmpAvailable = Counter(available)
+
+            diff = cmpAvailable - cmpInstalled
+            packages = diff.elements()
+        else:
+            packages = self.packagedb.list_packages(None)
+
+        for package in packages:
+            self.__get_package(package)
+        self.percentage(100)
+
     def get_repo_list(self, filters):
         """ Prints available repositories """
         self.allow_cancel(True)
         self.percentage(None)
+        self.status(STATUS_INFO)
 
         for repo in pisi.api.list_repos():
             # Internal FIXME: What an ugly way to get repo uri
