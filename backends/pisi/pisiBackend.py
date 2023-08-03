@@ -196,6 +196,8 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
 
             file_list = ";".join(files)
             self.files(pkg_id, file_list)
+        else:
+            self.error(ERROR_PACKAGE_NOT_FOUND, "Package must be installed to get file list")
 
     def get_repo_list(self, filters):
         """ Prints available repositories """
