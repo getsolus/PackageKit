@@ -338,6 +338,16 @@ pk_backend_update_packages (PkBackend *backend, PkBackendJob *job, PkBitfield tr
 }
 
 void
+pk_backend_get_packages (PkBackend *backend, PkBackendJob *job, PkBitfield filters)
+{
+	gchar *filters_text;
+
+	filters_text = pk_filter_bitfield_to_string (filters);
+	pk_backend_spawn_helper (spawn, job, "pisiBackend.py", "get-packages", filters_text, NULL);
+	g_free (filters_text);
+}
+
+void
 pk_backend_update_system (PkBackend *backend, PkBackendJob *job, PkBitfield transaction_flags)
 {
     gchar *transaction_flags_temp;
