@@ -22,5 +22,5 @@ install_data(
 
 install_data(
   'groups.list',
-  install_dir: join_paths(get_option('sysconfdir'), 'PackageKit', 'pisi.conf')
+  install_dir: join_paths(get_option('sysconfdir'), 'PackageKit', 'pisi.d')
 )
