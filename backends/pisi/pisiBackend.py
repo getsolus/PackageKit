@@ -115,13 +115,14 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         """ Returns package object suitable for other methods """
 
         repo = ""
-        if self.packagedb.has_package(package):
+        if self.installdb.has_package(package):
+            status = INFO_INSTALLED
+            # FIXME: Think about this properly & cleanup
+            #pkg = self.installdb.get_package(package)
+            pkg, repo = self.packagedb.get_package_repo(package, None)
+        elif self.packagedb.has_package(package):
             status = INFO_AVAILABLE
             pkg, repo = self.packagedb.get_package_repo(package, None)
-        elif self.installdb.has_package(package):
-            status = INFO_INSTALLED
-            pkg = self.installdb.get_package(package)
-            repo = "Installed"
         else:
             self.error(ERROR_PACKAGE_NOT_FOUND, "Package %s was not found" % package)
 
