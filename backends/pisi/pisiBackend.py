@@ -113,14 +113,17 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
 
     def __get_package(self, package, filters=None):
         """ Returns package object suitable for other methods """
-        if self.installdb.has_package(package):
+
+        repo = ""
+        if self.packagedb.has_package(package):
+            status = INFO_AVAILABLE
+            pkg, repo = self.packagedb.get_package_repo(package, None)
+        elif self.installdb.has_package(package):
             status = INFO_INSTALLED
             pkg = self.installdb.get_package(package)
-        elif self.packagedb.has_package(package):
-            status = INFO_AVAILABLE
-            pkg = self.packagedb.get_package(package)
+            repo = "Installed"
         else:
-            self.error(ERROR_PACKAGE_NOT_FOUND, "Package was not found")
+            self.error(ERROR_PACKAGE_NOT_FOUND, "Package %s was not found" % package)
 
         if filters:
             if "none" not in filters:
@@ -134,12 +137,6 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                     return
 
         version = self.__get_package_version(pkg)
-        repo = ""
-        try:
-            package, repo = self.packagedb.get_package_repo(pkg.name, None)
-        # Installed packages not part of repo
-        except Exception:
-            pass
 
         id = self.get_package_id(pkg.name, version, pkg.architecture, repo)
 
