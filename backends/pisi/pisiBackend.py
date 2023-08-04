@@ -216,27 +216,29 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 self.error(ERROR_PACKAGE_NOT_FOUND, "Package %s was not found" % package)
 
     def get_files(self, package_ids):
-        """ Prints a file list for a given package """
+        """ Prints a file list for a given packages """
         self.allow_cancel(True)
         self.percentage(None)
 
-        package = self.get_package_from_id(package_ids[0])[0]
+        for package_id in package_ids:
+            package = self.get_package_from_id(package_id)[0]
 
-        if self.installdb.has_package(package):
-            pkg = self.packagedb.get_package(package)
-            repo = self.packagedb.get_package_repo(pkg.name, None)
-            pkg_id = self.get_package_id(pkg.name,
-                                         self.__get_package_version(pkg),
-                                         pkg.architecture, repo[1])
+            if self.installdb.has_package(package):
+                pkg = self.packagedb.get_package(package)
+                repo = self.packagedb.get_package_repo(pkg.name, None)
+                pkg_id = self.get_package_id(pkg.name,
+                                            self.__get_package_version(pkg),
+                                            pkg.architecture, repo[1])
 
-            pkg = self.installdb.get_files(package)
+                pkg = self.installdb.get_files(package)
 
-            files = map(lambda y: "/%s" % y.path, pkg.list)
+                files = map(lambda y: "/%s" % y.path, pkg.list)
 
-            file_list = ";".join(files)
-            self.files(pkg_id, file_list)
-        else:
-            self.error(ERROR_PACKAGE_NOT_FOUND, "Package must be installed to get file list")
+                file_list = ";".join(files)
+                self.files(pkg_id, file_list)
+            else:
+                self.error(ERROR_PACKAGE_NOT_FOUND,
+                           "Package %s must be installed to get file list" % package_id.split(";"))
 
     def get_packages(self, filters):
         self.status(STATUS_QUERY)
