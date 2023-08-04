@@ -268,6 +268,12 @@ pk_backend_remove_packages (PkBackend *backend, PkBackendJob *job,
 }
 
 void
+pk_backend_repo_enable (PkBackend *backend, PkBackendJob *job, const gchar *rid, gboolean enabled)
+{
+	pk_backend_spawn_helper (spawn, job, "pisiBackend.py", "repo-enable", rid, pk_backend_bool_to_string (enabled), NULL);
+}
+
+void
 pk_backend_search_details (PkBackend *backend, PkBackendJob *job, PkBitfield filters, gchar **values)
 {
     gchar *filters_text;
