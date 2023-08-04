@@ -554,6 +554,16 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         pisi.api.set_userinterface(self.saved_ui)
         self.percentage(100)
 
+    def repo_enable(self, repoid, enable):
+        self.status(STATUS_INFO)
+        self.allow_cancel(True)
+        self.percentage(None)
+        if self.repodb.has_repo(repoid):
+            pisi.api.set_repo_activity(repoid, enable)
+            return
+        else:
+            self.error(ERROR_REPO_NOT_FOUND, "Repository %s was not found" % repoid)
+
     def repo_set_data(self, repo_id, parameter, value):
         """ Sets a parameter for the repository specified """
         self.allow_cancel(False)
