@@ -309,12 +309,10 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
 
         self._updates = dict()
         for package in pisi.api.list_upgradable():
-            pkg = self.packagedb.get_package(package)
+            pkg, repo = self.packagedb.get_package_repo(package, None)
             version = self.__get_package_version(pkg)
-            id = self.get_package_id(pkg.name, version, pkg.architecture, "")
+            id = self.get_package_id(pkg.name, version, pkg.architecture, repo)
             installed_package = self.installdb.get_package(package)
-
-            repo = self.packagedb.get_package_repo(pkg.name, None)[1]
             pindex = "/var/lib/eopkg/index/%s/eopkg-index.xml" % repo
 
             self._updates[pkg.name] = \
