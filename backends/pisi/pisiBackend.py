@@ -66,6 +66,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         # self.filesdb = pisi.db.filesdb.FilesDB()
         self.installdb = pisi.db.installdb.InstallDB()
         self.packagedb = pisi.db.packagedb.PackageDB()
+        self.historydb = pisi.db.historydb.HistoryDB()
         self.repodb = pisi.db.repodb.RepoDB()
 
         # Do not ask any question to users
@@ -247,6 +248,9 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
 
             diff = cmpAvailable - cmpInstalled
             packages = diff.elements()
+        elif FILTER_NEWEST in filters:
+            since = self.historydb.get_last_repo_update()
+            packages = self.packagedb.list_newest(None, since)
         else:
             packages = self.packagedb.list_packages(None)
 
