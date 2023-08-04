@@ -41,6 +41,7 @@ from packagekit.package import PackagekitPackage
 from packagekit import enums
 import os.path
 import piksemel
+from collections import Counter
 import re
 
 class SimplePisiHandler(pisi.ui.UI):
@@ -248,10 +249,10 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         elif FILTER_NOT_INSTALLED in filters:
             installed = self.installdb.list_installed()
             available = self.packagedb.list_packages(None)
-            cmpInstalled = Counter(installed)
-            cmpAvailable = Counter(available)
+            cntInstalled = Counter(installed)
+            cntAvailable = Counter(available)
 
-            diff = cmpAvailable - cmpInstalled
+            diff = cntAvailable - cntInstalled
             packages = diff.elements()
         elif FILTER_NEWEST in filters:
             since = self.historydb.get_last_repo_update()
