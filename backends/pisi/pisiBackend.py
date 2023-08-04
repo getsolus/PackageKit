@@ -172,7 +172,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             #    icon = "image-missing"
 
             cat_id = component.name  # same thing
-            self.category("", cat_id, component.name, unicode(component.summary), "image-missing")
+            self.category(component.group, cat_id, component.name, unicode(component.summary), "image-missing")
 
     def repair_system(self, transaction_flags):
         '''
