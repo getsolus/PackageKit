@@ -132,8 +132,14 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                     return
 
         version = self.__get_package_version(pkg)
+        repo = ""
+        try:
+            package, repo = self.packagedb.get_package_repo(pkg.name, None)
+        # Installed packages not part of repo
+        except Exception:
+            pass
 
-        id = self.get_package_id(pkg.name, version, pkg.architecture, "")
+        id = self.get_package_id(pkg.name, version, pkg.architecture, repo)
 
         return self.package(id, status, pkg.summary)
 
