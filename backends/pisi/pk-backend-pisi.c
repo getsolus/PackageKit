@@ -98,6 +98,8 @@ pk_backend_get_filters (PkBackend *backend)
     return pk_bitfield_from_enums(
         PK_FILTER_ENUM_GUI,
         PK_FILTER_ENUM_INSTALLED,
+        PK_FILTER_ENUM_NOT_INSTALLED,
+        PK_FILTER_ENUM_NEWEST,
         -1);
 }
 
