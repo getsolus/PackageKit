@@ -161,7 +161,6 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             if self.packagedb.has_package(package):
                 for pkg in self.packagedb.get_package(package).runtimeDependencies():
                     self.__get_package(pkg.package)
-            # FIXME: Doesn't seem to be working...
             elif self.installdb.has_package(package):
                 for pkg in self.installdb.get_package(package).runtimeDependencies():
                     self.__get_package(pkg.package)
