@@ -369,22 +369,33 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         return("Log not found", "", False, "")
 
     def get_update_detail(self, package_ids):
+        self.status(STATUS_INFO)
+        self.allow_cancel(True)
+        self.percentage(None)
+
         for package_id in package_ids:
             package = self.get_package_from_id(package_id)[0]
-            the_package = self.installdb.get_package(package)
+            pkg, repo = self.packagedb.get_package_repo(package, None)
+            version = self.__get_package_version(pkg)
+            id = self.get_package_id(pkg.name, version, pkg.architecture, repo)
+            pindex = "/var/lib/eopkg/index/%s/eopkg-index.xml" % repo
+
             updates = [package_id]
             obsoletes = ""
-            # TODO: Add regex matching for #FIXES:ID or something similar
-            cve_url = ""
-            package_url = the_package.source.homepage
+            package_url = pkg.source.homepage
             vendor_url = package_url if package_url is not None else ""
-            issued = ""
+
+            # FIXME: Is this printed out?
+            cveRegex = re.compile(r" (CVE\-[0-9]+\-[0-9]+)")
+            cveHit = re.match(cveRegex, str(pkg.summary))
+            cve_url = ""
+            if cveHit is not None:
+                cve_url = "https://cve.mitre.org/cgi-bin/cvename.cgi?name={}".format(url, cveHit.group())
 
             changelog = ""
-            # TODO: Set to security_issued if security update
-            issued = updated = ""
-            update_message, security_issued, needsReboot, bugURI = \
-                self._updates[package]
+            update_message, issued, needsReboot, bugURI = \
+                self._extract_update_details(pindex, pkg.name)
+            updated = issued if issued is not None else ""
 
             # TODO: Add tagging to repo's, or a mapping file
             state = UPDATE_STATE_STABLE
