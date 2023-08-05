@@ -121,6 +121,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 status = INFO_INSTALLED
         elif self.installdb.has_package(package):
             pkg = self.installdb.get_package(package)
+            status = INFO_INSTALLED
             repo = "Installed"
         else:
             self.error(ERROR_PACKAGE_NOT_FOUND, "Package %s was not found" % package)
