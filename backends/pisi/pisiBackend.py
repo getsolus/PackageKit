@@ -543,7 +543,6 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         """ Removes given package from system"""
         self.allow_cancel(False)
         self.percentage(0)
-        # TODO: use autoremove
         packages = list()
 
         for package_id in package_ids:
@@ -567,7 +566,10 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 self._report_all_for_package(package, remove=True)
             return
         try:
-            pisi.api.remove(packages)
+            if autoremove:
+                pisi.api.autoremove(packages)
+            else:
+                pisi.api.remove(packages)
         except pisi.Error, e:
             self.error(ERROR_CANNOT_REMOVE_SYSTEM_PACKAGE, e)
         pisi.api.set_userinterface(self.saved_ui)
