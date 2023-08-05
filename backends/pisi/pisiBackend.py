@@ -204,19 +204,31 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
 
             pkg = ""
             size = 0
+            data = "installed"
+
+            # FIXME: There is duplication here from __get_package
             if self.packagedb.has_package(package):
-                pkg = self.packagedb.get_package(package)
-                repo = self.packagedb.get_package_repo(pkg.name, None)
-                size = int(pkg.packageSize)
+                pkg, repo = self.packagedb.get_package_repo(package, None)
+                # FIXME: How should filters affect this?
+                if self.installdb.has_package(package):
+                    local_pkg = self.installdb.get_package(package)
+                    size = int(local_pkg.installedSize)
+                else:
+                    size = int(pkg.packageSize)
+                if self.installdb.has_package(package):
+                    data = "installed:{}".format(repo)
+                else:
+                    data = repo
             elif self.installdb.has_package(package):
                 pkg = self.installdb.get_package(package)
-                repo = "installed"
+                data = "local"
                 size = int(pkg.installedSize)
             else:
                 self.error(ERROR_PACKAGE_NOT_FOUND, "Package %s was not found" % package)
 
+
             pkg_id = self.get_package_id(pkg.name, self.__get_package_version(pkg),
-                                            pkg.architecture, repo[1])
+                                            pkg.architecture, data)
 
             if pkg.partOf in self.groups:
                 group = self.groups[pkg.partOf]
