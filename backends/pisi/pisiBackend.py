@@ -610,13 +610,19 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         else:
             self.error(ERROR_NOT_SUPPORTED, "Parameter not supported")
 
-    def resolve(self, filters, package):
+    def resolve(self, filters, packages):
         """ Turns a single package name into a package_id
         suitable for the other methods """
         self.allow_cancel(True)
         self.percentage(None)
+        self.status(STATUS_QUERY)
 
-        self.__get_package(package[0], filters)
+        for package in packages:
+            pkg = self.get_package_from_id(package)[0]
+            try:
+                self.__get_package(pkg, filters)
+            except Exception:
+                self.error(ERROR_PACKAGE_NOT_FOUND, "Package %s not found" % package)
 
     def search_details(self, filters, values):
         """ Prints a detailed list of packages contains search term """
@@ -678,7 +684,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
 
         # FIXME: fetch/install progress
         self.allow_cancel(False)
-        self.percentage(None)
+        self.percentage(0)
 
         packages = list()
         for package_id in package_ids:
@@ -704,13 +710,14 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         except pisi.Error, e:
             self.error(ERROR_UNKNOWN, e)
         pisi.api.set_userinterface(self.saved_ui)
+        self.percentage(100)
 
     def update_system(self, only_trusted):
         """ Updates all available packages """
         # FIXME: use only_trusted
         # FIXME: fetch/install progress
         self.allow_cancel(False)
-        self.percentage(None)
+        self.percentage(0)
 
         if not len(pisi.api.list_upgradable()) > 0:
             self.error(ERROR_NO_PACKAGES_TO_UPDATE, "System is already up2date")
@@ -719,6 +726,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             pisi.api.upgrade(pisi.api.list_upgradable())
         except pisi.Error, e:
             self.error(ERROR_UNKNOWN, e)
+        self.percentage(100)
 
 
 def main():
