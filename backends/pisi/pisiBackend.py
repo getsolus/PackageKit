@@ -199,31 +199,34 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         self.allow_cancel(True)
         self.percentage(None)
 
-        packages = list()
         for package in package_ids:
             package = self.get_package_from_id(package)[0]
 
+            pkg = ""
+            size = 0
             if self.packagedb.has_package(package):
                 pkg = self.packagedb.get_package(package)
                 repo = self.packagedb.get_package_repo(pkg.name, None)
-                pkg_id = self.get_package_id(pkg.name,
-                                            self.__get_package_version(pkg),
-                                            pkg.architecture, repo[1])
-
-                if pkg.partOf in self.groups:
-                    group = self.groups[pkg.partOf]
-                else:
-                    group = GROUP_UNKNOWN
-
-                homepage = pkg.source.homepage if pkg.source.homepage is not None\
-                    else ''
-
                 size = int(pkg.packageSize)
-
-                self.details(pkg_id, pkg.summary, ",".join(pkg.license), group, pkg.description,
-                            homepage, size)
+            elif self.installdb.has_package(package):
+                pkg = self.installdb.get_package(package)
+                repo = "installed"
+                size = int(pkg.installedSize)
             else:
                 self.error(ERROR_PACKAGE_NOT_FOUND, "Package %s was not found" % package)
+
+            pkg_id = self.get_package_id(pkg.name, self.__get_package_version(pkg),
+                                            pkg.architecture, repo[1])
+
+            if pkg.partOf in self.groups:
+                group = self.groups[pkg.partOf]
+            else:
+                group = GROUP_UNKNOWN
+            homepage = pkg.source.homepage if pkg.source.homepage is not None\
+                else ''
+
+            self.details(pkg_id, pkg.summary, ",".join(pkg.license), group, pkg.description,
+                            homepage, size)
 
     def get_files(self, package_ids):
         """ Prints a file list for a given packages """
