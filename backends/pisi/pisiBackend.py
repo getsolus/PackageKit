@@ -115,17 +115,22 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         """ Returns package object suitable for other methods """
 
         status = INFO_AVAILABLE
+        data = "installed"
         if self.packagedb.has_package(package):
             pkg, repo = self.packagedb.get_package_repo(package, None)
             if self.installdb.has_package(package):
                 status = INFO_INSTALLED
+                data = "installed:{}".format(repo)
+            if not self.installdb.has_package(package):
+                data = repo
         elif self.installdb.has_package(package):
             pkg = self.installdb.get_package(package)
             status = INFO_INSTALLED
-            repo = "Installed"
+            data = "local"
         else:
             self.error(ERROR_PACKAGE_NOT_FOUND, "Package %s was not found" % package)
 
+        # TODO: Actually figure out whats going on here
         if filters:
             if "none" not in filters:
                 if FILTER_INSTALLED in filters and status != INFO_INSTALLED:
@@ -139,7 +144,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
 
         version = self.__get_package_version(pkg)
 
-        id = self.get_package_id(pkg.name, version, pkg.architecture, repo)
+        id = self.get_package_id(pkg.name, version, pkg.architecture, data)
 
         return self.package(id, status, pkg.summary)
 
