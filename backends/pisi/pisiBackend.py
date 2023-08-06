@@ -122,11 +122,10 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         # and get functionality working properly (filters in particular)
         if self.packagedb.has_package(package):
             pkg, repo = self.packagedb.get_package_repo(package, None)
-            if self.installdb.has_package(package):
-                if FILTER_INSTALLED in filters:
-                    pkg = self.installdb.get_package(package)
-                else:
-                    status = INFO_INSTALLED
+            data = repo
+            if self.installdb.has_package(package) and not FILTER_NOT_INSTALLED in filters:
+                pkg = self.installdb.get_package(package)
+                status = INFO_INSTALLED
                 data = "installed:{}".format(repo)
                 if FILTER_NEWEST in filters:
                     status = INFO_AVAILABLE
