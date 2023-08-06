@@ -766,13 +766,14 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         # FIXME: fetch/install progress
         self.allow_cancel(False)
         self.percentage(0)
+        self.status(STATUS_INSTALL)
 
         if not len(pisi.api.list_upgradable()) > 0:
             self.error(ERROR_NO_PACKAGES_TO_UPDATE, "System is already up2date")
 
         try:
             pisi.api.upgrade(pisi.api.list_upgradable())
-        except pisi.Error, e:
+        except Exception, e:
             self.error(ERROR_UNKNOWN, e)
         self.percentage(100)
 
