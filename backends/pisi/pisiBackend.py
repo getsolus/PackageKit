@@ -300,7 +300,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             packages = self.packagedb.list_packages(None)
 
         for package in packages:
-            self.__get_package(package)
+            self.__get_package(package, filters)
         self.percentage(100)
 
     def get_repo_list(self, filters):
