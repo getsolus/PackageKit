@@ -424,13 +424,15 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 cve_url = "https://cve.mitre.org/cgi-bin/cvename.cgi?name={}".format(url, cveHit.group())
 
             changelog = ""
-            update_message, issued, needsReboot, bugURI = \
+            update_message, updated, needsReboot, bugURI = \
                 self._extract_update_details(pindex, pkg.name)
-            updated = issued if issued is not None else ""
 
             # TODO: Add tagging to repo's, or a mapping file
             state = UPDATE_STATE_STABLE
             reboot = "system" if needsReboot else "none"
+
+            updated = updated.replace('', "")
+            issued = ""
 
             self.update_detail(package_id, updates, obsoletes, vendor_url,
                                bugURI, cve_url, reboot, update_message,
