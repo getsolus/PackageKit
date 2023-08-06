@@ -636,7 +636,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
 
         if parameter == "add-repo":
             try:
-                pisi.api.add_repo(repo_id, value, parameter)
+                pisi.api.add_repo(repo_id, value)
             except pisi.Error, e:
                 self.error(ERROR_UNKNOWN, e)
 
@@ -652,7 +652,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             except pisi.Error:
                 self.error(ERROR_REPO_NOT_FOUND, "Repository does not exist")
         else:
-            self.error(ERROR_NOT_SUPPORTED, "Parameter not supported")
+            self.error(ERROR_NOT_SUPPORTED, "Valid parameters are add-repo and remove-repo")
 
     def resolve(self, filters, packages):
         """ Turns a single package name into a package_id
