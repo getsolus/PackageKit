@@ -123,13 +123,18 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         if self.packagedb.has_package(package):
             pkg, repo = self.packagedb.get_package_repo(package, None)
             if self.installdb.has_package(package):
-                status = INFO_INSTALLED
+                if FILTER_INSTALLED in filters:
+                    pkg = self.installdb.get_package(package)
+                else:
+                    status = INFO_INSTALLED
                 data = "installed:{}".format(repo)
                 if FILTER_NEWEST in filters:
                     status = INFO_AVAILABLE
                     data = repo
             if not self.installdb.has_package(package):
                 data = repo
+                if FILTER_NOT_INSTALLED in filters:
+                    status = INFO_AVAILABLE
         elif self.installdb.has_package(package):
             pkg = self.installdb.get_package(package)
             status = INFO_INSTALLED
@@ -142,9 +147,9 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             if "none" not in filters:
                 if FILTER_INSTALLED in filters and status != INFO_INSTALLED:
                     return
-                if FILTER_NOT_INSTALLED in filters and status != INFO_INSTALLED:
-                    if FILTER_NEWEST not in filters:
-                        return
+                #if FILTER_NOT_INSTALLED in filters and status != INFO_INSTALLED:
+                #    if FILTER_NEWEST not in filters:
+                #        return
                 if FILTER_GUI in filters and "app:gui" not in pkg.isA:
                     return
                 if FILTER_NOT_GUI in filters and "app:gui" in pkg.isA:
