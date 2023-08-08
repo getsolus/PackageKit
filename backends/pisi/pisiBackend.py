@@ -465,14 +465,16 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 cve_url = "https://cve.mitre.org/cgi-bin/cvename.cgi?name={}".format(url, cveHit.group())
 
             changelog = ""
-            update_message, updated, needsReboot, bugURI = \
+            update_message, updated_date, needsReboot, bugURI = \
                 self._extract_update_details(pindex, pkg.name)
 
             # TODO: Add tagging to repo's, or a mapping file
             state = UPDATE_STATE_STABLE
             reboot = "system" if needsReboot else "none"
 
-            updated = updated.replace('', "")
+            # TODO: Eopkg doesn't provide any time
+            split_date = updated_date.split("-")
+            updated = "{}-{}-{}T00:00:00".format(split_date[0], split_date[1], split_date[2])
             issued = ""
 
             self.update_detail(package_id, updates, obsoletes, vendor_url,
