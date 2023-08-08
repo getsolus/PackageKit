@@ -457,16 +457,15 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             package_url = pkg.source.homepage
             vendor_url = package_url if package_url is not None else ""
 
-            # FIXME: Is this printed out?
-            cveRegex = re.compile(r" (CVE\-[0-9]+\-[0-9]+)")
-            cveHit = re.match(cveRegex, str(pkg.summary))
-            cve_url = ""
-            if cveHit is not None:
-                cve_url = "https://cve.mitre.org/cgi-bin/cvename.cgi?name={}".format(url, cveHit.group())
-
             changelog = ""
             update_message, updated_date, needsReboot, bugURI = \
                 self._extract_update_details(pindex, pkg.name)
+
+            cves = re.findall(r" (CVE\-[0-9]+\-[0-9]+)", str(update_message))
+            cve_url = ""
+            if cves is not None:
+                #cve_url = "https://cve.mitre.org/cgi-bin/cvename.cgi?name={}".format(cves[0])
+                cve_url = cves
 
             # TODO: Add tagging to repo's, or a mapping file
             state = UPDATE_STATE_STABLE
