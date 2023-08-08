@@ -811,24 +811,6 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         pisi.api.set_userinterface(self.saved_ui)
         self.percentage(100)
 
-    def update_system(self, only_trusted):
-        """ Updates all available packages """
-        # FIXME: use only_trusted
-        # FIXME: fetch/install progress
-        self.allow_cancel(False)
-        self.percentage(0)
-        self.status(STATUS_INSTALL)
-
-        if not len(pisi.api.list_upgradable()) > 0:
-            self.error(ERROR_NO_PACKAGES_TO_UPDATE, "System is already up2date")
-
-        try:
-            pisi.api.upgrade(pisi.api.list_upgradable())
-        except Exception, e:
-            self.error(ERROR_UNKNOWN, e)
-        self.percentage(100)
-
-
 def main():
     backend = PackageKitPisiBackend('')
     backend.dispatcher(sys.argv[1:])
