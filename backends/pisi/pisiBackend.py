@@ -768,9 +768,9 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
 
         # FIXME: use only_trusted
         # FIXME: fetch/install progress
-        self.allow_cancel(True)
-        self.percentage(0)
-        #self.status(STATUS_RUNNING)
+        self.allow_cancel(False)
+        self.percentage(None)
+        self.status(STATUS_RUNNING)
 
         packages = list()
         for package_id in package_ids:
@@ -791,11 +791,20 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             for package in packages:
                 self._report_all_for_package(package)
             return
+
         self.allow_cancel(False)
         self.status(STATUS_INSTALL)
         self.percentage(0)
+
         try:
-            #self.percentage(50)
+            # We have to set the package status as installing to successfully complete the transaction
+            for package_id in package_ids:
+                # FIXME: This is a bit ugly
+                split_id = package_id.split(";", 4)
+                pkg = self.packagedb.get_package(split_id[0])
+                self.package(package_id, INFO_INSTALLING, pkg.summary)
+
+            # Actually upgrade
             pisi.api.upgrade(packages)
         except Exception, e:
             self.error(ERROR_UNKNOWN, e)
