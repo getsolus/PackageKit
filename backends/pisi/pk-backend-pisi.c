@@ -272,7 +272,7 @@ pk_backend_remove_packages (PkBackend *backend, PkBackendJob *job,
 void
 pk_backend_repo_enable (PkBackend *backend, PkBackendJob *job, const gchar *rid, gboolean enabled)
 {
-	pk_backend_spawn_helper (spawn, job, "pisiBackend.py", "repo-enable", rid, pk_backend_bool_to_string (enabled), NULL);
+    pk_backend_spawn_helper (spawn, job, "pisiBackend.py", "repo-enable", rid, pk_backend_bool_to_string (enabled), NULL);
 }
 
 void
@@ -348,11 +348,11 @@ pk_backend_update_packages (PkBackend *backend, PkBackendJob *job, PkBitfield tr
 void
 pk_backend_get_packages (PkBackend *backend, PkBackendJob *job, PkBitfield filters)
 {
-	gchar *filters_text;
+    gchar *filters_text;
 
-	filters_text = pk_filter_bitfield_to_string (filters);
-	pk_backend_spawn_helper (spawn, job, "pisiBackend.py", "get-packages", filters_text, NULL);
-	g_free (filters_text);
+    filters_text = pk_filter_bitfield_to_string (filters);
+    pk_backend_spawn_helper (spawn, job, "pisiBackend.py", "get-packages", filters_text, NULL);
+    g_free (filters_text);
 }
 
 void
