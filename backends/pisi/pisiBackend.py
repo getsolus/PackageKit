@@ -237,7 +237,6 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             # FIXME: There is duplication here from __get_package
             if self.packagedb.has_package(package):
                 pkg, repo = self.packagedb.get_package_repo(package, None)
-                # FIXME: How should filters affect this?
                 if self.installdb.has_package(package):
                     local_pkg = self.installdb.get_package(package)
                     size = int(local_pkg.installedSize)
