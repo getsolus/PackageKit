@@ -573,8 +573,9 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
     def install_packages(self, transaction_flags, package_ids):
         """ Installs given package into system"""
         # FIXME: fetch/install progress
-        self.allow_cancel(False)
-        self.percentage(0)
+        self.allow_cancel(True)
+        self.percentage(None)
+        self.status(STATUS_RUNNING)
 
         packages = list()
 
@@ -591,7 +592,6 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
 
         ui = SimplePisiHandler()
 
-        self.status(STATUS_INSTALL)
         pisi.api.set_userinterface(ui)
         ui.the_callback = progress_cb
 
@@ -601,11 +601,33 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 self._report_all_for_package(package)
             return
         try:
+            # Update the status accordingly so that pkg
+            # completes the transaction without error
+            self.status(STATUS_DOWNLOAD)
+            self.percentage(0)
+            for package_id in package_ids:
+                # FIXME: This is a bit ugly
+                split_id = package_id.split(";", 4)
+                pkg = self.packagedb.get_package(split_id[0])
+                self.package(package_id, INFO_DOWNLOADING, pkg.summary)
+            self.percentage(100)
+
+            self.status(STATUS_INSTALL)
+            self.allow_cancel(False)
+            self.percentage(0)
+            for package_id in package_ids:
+                # FIXME: This is a bit ugly
+                split_id = package_id.split(";", 4)
+                pkg = self.packagedb.get_package(split_id[0])
+                self.package(package_id, INFO_INSTALLING, pkg.summary)
+
+            # Actually install
             pisi.api.install(packages)
+            self.percentage(100)
         except pisi.Error, e:
             self.error(ERROR_UNKNOWN, e)
         pisi.api.set_userinterface(self.saved_ui)
-        self.percentage(100)
+        self.finished()
 
     def refresh_cache(self, force):
         """ Updates repository indexes """
