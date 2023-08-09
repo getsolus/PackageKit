@@ -132,10 +132,14 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         if filters is not None:
             if FILTER_NOT_INSTALLED in filters:
                 fltred = available if available is not None else None
+                if fltred is None:
+                    return
                 fltr_status = INFO_AVAILABLE if fltred is not None else None
                 fltr_data = repo if fltred is not None else None
             if FILTER_INSTALLED in filters:
-                fltred = installed if installed is not None else available
+                fltred = installed if installed is not None else None
+                if fltred is None:
+                    return
                 fltr_status = INFO_INSTALLED if fltred is not None else None
                 fltr_data = "installed:{}".format(repo) if repo is not None else data
             # FIXME: Newest should be able to show the newest local version as well as remote version
@@ -144,7 +148,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 fltr_status = INFO_AVAILABLE if fltred is not None else None
                 fltr_data = repo if fltred is not None else None
             if FILTER_NEWEST in filters and FILTER_INSTALLED in filters:
-                fltred = installed if installed is not None else available
+                fltred = installed if installed is not None else None
                 fltr_status = INFO_INSTALLED if fltred is not None else None
                 fltr_data = "installed:{}".format(repo) if repo is not None else data
 
@@ -728,6 +732,11 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         for package in packages:
             pkg = self.get_package_from_id(package)[0]
             try:
+                # FIXME: HACKY HACKY
+                if filters is not None and FILTER_NEWEST in filters:
+                    self.__get_package(pkg, FILTER_NOT_INSTALLED)
+                if "none" in filters:
+                    self.__get_package(pkg, [FILTER_NOT_INSTALLED, FILTER_NEWEST])
                 self.__get_package(pkg, filters)
             except Exception:
                 self.error(ERROR_PACKAGE_NOT_FOUND, "Package %s not found" % package)
