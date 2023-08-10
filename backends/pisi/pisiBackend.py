@@ -179,6 +179,9 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             if FILTER_BASENAME in filters:
                 if any(suffix in pkg.name for suffix in pkg_subtypes):
                     return
+            if FILTER_NOT_BASENAME in filters:
+                if not any(suffix in pkg.name for suffix in pkg_subtypes):
+                    return
 
         version = self.__get_package_version(pkg)
         id = self.get_package_id(pkg.name, version, pkg.architecture, data)
