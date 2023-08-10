@@ -175,11 +175,19 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 return
             if FILTER_NOT_GUI in filters and "app:gui" in pkg.isA:
                 return
-            pkg_subtypes = ["-devel", "-dbginfo", "-32bit", "-docs"]
+            # FIXME: To lower
+            nonfree = ['EULA', 'Distributable']
+            if FILTER_FREE in filters:
+                if any(l in pkg.license for l in nonfree):
+                    return
+            if FILTER_NOT_FREE in filters:
+                if not any(l in pkg.license for l in nonfree):
+                    return
             if FILTER_DEVELOPMENT in filters and not "-devel" in pkg.name:
                 return
             if FILTER_NOT_DEVELOPMENT in filters and "-devel" in pkg.name:
                 return
+            pkg_subtypes = ["-devel", "-dbginfo", "-32bit", "-docs"]
             if FILTER_BASENAME in filters:
                 if any(suffix in pkg.name for suffix in pkg_subtypes):
                     return
