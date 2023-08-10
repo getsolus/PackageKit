@@ -176,6 +176,10 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             if FILTER_NOT_GUI in filters and "app:gui" in pkg.isA:
                 return
             pkg_subtypes = ["-devel", "-dbginfo", "-32bit", "-docs"]
+            if FILTER_DEVELOPMENT in filters and not "-devel" in pkg.name:
+                return
+            if FILTER_NOT_DEVELOPMENT in filters and "-devel" in pkg.name:
+                return
             if FILTER_BASENAME in filters:
                 if any(suffix in pkg.name for suffix in pkg_subtypes):
                     return
