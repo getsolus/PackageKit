@@ -175,6 +175,10 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 return
             if FILTER_NOT_GUI in filters and "app:gui" in pkg.isA:
                 return
+            pkg_subtypes = ["-devel", "-dbginfo", "-32bit", "-docs"]
+            if FILTER_BASENAME in filters:
+                if any(suffix in pkg.name for suffix in pkg_subtypes):
+                    return
 
         version = self.__get_package_version(pkg)
         id = self.get_package_id(pkg.name, version, pkg.architecture, data)
