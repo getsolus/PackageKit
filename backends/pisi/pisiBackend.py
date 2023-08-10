@@ -735,8 +735,6 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 # FIXME: HACKY HACKY
                 if filters is not None and FILTER_NEWEST in filters:
                     self.__get_package(pkg, FILTER_NOT_INSTALLED)
-                if "none" in filters:
-                    self.__get_package(pkg, [FILTER_NOT_INSTALLED, FILTER_NEWEST])
                 self.__get_package(pkg, filters)
             except Exception:
                 self.error(ERROR_PACKAGE_NOT_FOUND, "Package %s not found" % package)
