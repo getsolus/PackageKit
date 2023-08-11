@@ -688,7 +688,6 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
 
         ui = SimplePisiHandler()
 
-        package = self.get_package_from_id(package_ids[0])[0]
         self.status(STATUS_REMOVE)
 
         if TRANSACTION_FLAG_SIMULATE in transaction_flags:
@@ -697,6 +696,14 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 self._report_all_for_package(package, remove=True)
             return
         try:
+            # Set status to keep pk happy, we need to get callbacks from
+            # pisi.api.{remove,install,upgrade} itself ideally.
+            for package_id in package_ids:
+                # FIXME: This is a bit ugly
+                split_id = package_id.split(";", 4)
+                pkg = self.packagedb.get_package(split_id[0])
+                self.package(package_id, INFO_REMOVING, pkg.summary)
+
             if autoremove:
                 pisi.api.autoremove(packages)
             else:
