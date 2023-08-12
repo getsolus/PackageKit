@@ -158,9 +158,18 @@ pk_backend_get_details (PkBackend *backend, PkBackendJob *job, gchar **package_i
 }
 
 void
+pk_backend_get_details_local (PkBackend *backend, PkBackendJob *job, gchar **files)
+{
+    gchar *package_ids_temp;
+    package_ids_temp = pk_package_ids_to_string (files);
+    pk_backend_spawn_helper (spawn, job, "pisiBackend.py", "get-details-local", package_ids_temp, NULL);
+    g_free (package_ids_temp);
+}
+
+void
 pk_backend_get_distro_upgrades (PkBackend *backend, PkBackendJob *job)
 {
-	pk_backend_job_finished (job);
+        pk_backend_job_finished (job);
 }
 
 void
