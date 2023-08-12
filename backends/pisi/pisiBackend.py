@@ -370,37 +370,13 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
 
             diff = cntAvailable - cntInstalled
             packages = diff.elements()
-        elif FILTER_NEWEST in filters:
+        else:
             #since = self.historydb.get_last_repo_update()
             #packages = self.packagedb.list_newest(None, since)
             packages = available
-        else:
-            all_pkgs = True
-            packages = list(set(available + installed))
 
-        # FIXME: duplication from __get_package here due to how filters are currently setup
-        if all_pkgs is True:
-            for package in available:
-                pkg, repo = self.packagedb.get_package_repo(package) if self.packagedb.has_package(package) else (None, None)
-                status = INFO_AVAILABLE
-                data = repo
-                version = self.__get_package_version(pkg)
-                id = self.get_package_id(pkg.name, version, pkg.architecture, data)
-                self.package(id, status, pkg.summary)
-            for package in installed:
-                pkg = self.installdb.get_package(package) if self.installdb.has_package(package) else None
-                available, repo = self.packagedb.get_package_repo(package) if self.packagedb.has_package(package) else (None, None)
-                status = INFO_INSTALLED
-                if repo is None:
-                    data = "installed"
-                else:
-                    data = "installed:{}".format(repo)
-                version = self.__get_package_version(pkg)
-                id = self.get_package_id(pkg.name, version, pkg.architecture, data)
-                self.package(id, status, pkg.summary)
-        else:
-            for package in packages:
-                self.__get_package(package)
+        for package in packages:
+            self.__get_package(package)
 
         self.percentage(100)
 
