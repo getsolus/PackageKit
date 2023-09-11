@@ -572,8 +572,16 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         ui.the_callback = progress_cb
 
         try:
-            self.status(STATUS_INSTALL)
+            # Actually install
             pisi.api.install(files)
+
+            # Set status to keep pk happy, we need to get callbacks from
+            # pisi.api.{remove,install,upgrade} itself ideally.
+            for package_id in package_ids:
+                # FIXME: This is a bit ugly
+                split_id = package_id.split(";", 4)
+                pkg = self.packagedb.get_package(split_id[0])
+                self.package(package_id, INFO_INSTALLING, pkg.summary)
         except pisi.Error, e:
             # FIXME: Error: internal-error : Package re-install declined
             # Force needed?
@@ -637,8 +645,8 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 self._report_all_for_package(package)
             return
         try:
-            # Update the status accordingly so that pkg
-            # completes the transaction without error
+            # Set status to keep pk happy, we need to get callbacks from
+            # pisi.api.{remove,install,upgrade} itself ideally.
             self.status(STATUS_DOWNLOAD)
             self.percentage(0)
             for package_id in package_ids:
@@ -865,6 +873,9 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         self.percentage(0)
 
         try:
+            # Actually upgrade
+            pisi.api.upgrade(packages)
+
             # We have to set the package status as installing to successfully complete the transaction
             for package_id in package_ids:
                 # FIXME: This is a bit ugly
@@ -872,8 +883,6 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 pkg = self.packagedb.get_package(split_id[0])
                 self.package(package_id, INFO_INSTALLING, pkg.summary)
 
-            # Actually upgrade
-            pisi.api.upgrade(packages)
         except Exception, e:
             self.error(ERROR_UNKNOWN, e)
         pisi.api.set_userinterface(self.saved_ui)
