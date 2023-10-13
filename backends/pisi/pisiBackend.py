@@ -659,6 +659,9 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 self._report_all_for_package(package)
             return
 
+        if TRANSACTION_FLAG_ONLY_DOWNLOAD in transaction_flags:
+            pisi.context.set_option("fetch_only", True)
+
         try:
             pisi.api.install(packages)
         except pisi.Error, e:
@@ -878,6 +881,9 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             for package in packages:
                 self._report_all_for_package(package)
             return
+
+        if TRANSACTION_FLAG_ONLY_DOWNLOAD in transaction_flags:
+            pisi.context.set_option("fetch_only", True)
 
         try:
             # Actually upgrade
