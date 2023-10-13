@@ -44,6 +44,7 @@ import piksemel
 from collections import Counter
 import re
 
+# Override PiSi UI so we can get callbacks for progress and events
 class SimplePisiHandler(pisi.ui.UI):
 
     def __init(self):
@@ -52,6 +53,8 @@ class SimplePisiHandler(pisi.ui.UI):
     def display_progress(self, **ka):
         self.the_callback(**ka)
 
+    def notify(self, event, **keywords):
+        self.pisi_status(event, **keywords)
 
 class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
 
@@ -518,14 +521,18 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
 
     def download_packages(self, directory, package_ids):
         """ Download the given packages to a directory """
-        self.allow_cancel(False)
-        self.percentage(None)
+        self.allow_cancel(True)
+        self.percentage(0)
         self.status(STATUS_DOWNLOAD)
 
         packages = list()
 
         def progress_cb(**kw):
             self.percentage(int(kw['percent']))
+
+        def status_cb(event, **keywords):
+            if event == pisi.ui.downloading:
+                self.package(package_id, INFO_DOWNLOADING, pkg.summary)
 
         ui = SimplePisiHandler()
         for package_id in package_ids:
@@ -538,6 +545,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         try:
             pisi.api.set_userinterface(ui)
             ui.the_callback = progress_cb
+            ui.pisi_status = status_cb
             if directory is None:
                 directory = os.path.curdir
             pisi.api.fetch(packages, directory)
@@ -551,41 +559,34 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         except Exception, e:
             self.error(ERROR_PACKAGE_DOWNLOAD_FAILED,
                        "Could not download package: %s" % e)
-        self.percentage(None)
+        self.finished()
 
     def install_files(self, only_trusted, files):
         """ Installs given package into system"""
 
         # FIXME: use only_trusted
-
         # FIXME: install progress
         self.allow_cancel(False)
-        self.percentage(0)
+        self.percentage(None)
 
-        def progress_cb(**kw):
-            self.percentage(int(kw['percent']))
+        def status_cb(event, **keywords):
+            if event == pisi.ui.extracting or event == pisi.ui.installing:
+                self.status(STATUS_INSTALL)
+                self.package(package_id, INFO_INSTALLING, pkg.summary)
 
         ui = SimplePisiHandler()
-
-        self.status(STATUS_INSTALL)
         pisi.api.set_userinterface(ui)
-        ui.the_callback = progress_cb
+
+        ui.pisi_status = status_cb
 
         try:
             # Actually install
             pisi.api.install(files)
-
-            # Set status to keep pk happy, we need to get callbacks from
-            # pisi.api.{remove,install,upgrade} itself ideally.
-            for package_id in package_ids:
-                # FIXME: This is a bit ugly
-                split_id = package_id.split(";", 4)
-                pkg = self.packagedb.get_package(split_id[0])
-                self.package(package_id, INFO_INSTALLING, pkg.summary)
         except pisi.Error, e:
             # FIXME: Error: internal-error : Package re-install declined
             # Force needed?
             self.error(ERROR_PACKAGE_ALREADY_INSTALLED, e)
+
         pisi.api.set_userinterface(self.saved_ui)
         self.percentage(100)
 
@@ -616,10 +617,10 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
 
     def install_packages(self, transaction_flags, package_ids):
         """ Installs given package into system"""
-        # FIXME: fetch/install progress
+
+        # FIXME: better fetch/install progress e.g. divide by len of packages
         self.allow_cancel(True)
         self.percentage(None)
-        self.status(STATUS_RUNNING)
 
         packages = list()
 
@@ -634,42 +635,35 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         def progress_cb(**kw):
             self.percentage(int(kw['percent']))
 
-        ui = SimplePisiHandler()
+        def status_cb(event, **keywords):
+            # FIXME: Ugly package splitting
+            split_id = package_id.split(";", 4)
+            pkg = self.packagedb.get_package(split_id[0])
+            if event == pisi.ui.downloading:
+                self.status(STATUS_DOWNLOAD)
+                self.package(package_id, INFO_DOWNLOADING, pkg.summary)
+            elif event == pisi.ui.extracting or event == pisi.ui.installing:
+                self.status(STATUS_INSTALL)
+                self.percentage(None)
+                self.allow_cancel(False)
+                self.package(package_id, INFO_INSTALLING, pkg.summary)
 
+        ui = SimplePisiHandler()
         pisi.api.set_userinterface(ui)
+
         ui.the_callback = progress_cb
+        ui.pisi_status = status_cb
 
         if TRANSACTION_FLAG_SIMULATE in transaction_flags:
-            # Simulated, not real.
             for package in packages:
                 self._report_all_for_package(package)
             return
+
         try:
-            # Set status to keep pk happy, we need to get callbacks from
-            # pisi.api.{remove,install,upgrade} itself ideally.
-            self.status(STATUS_DOWNLOAD)
-            self.percentage(0)
-            for package_id in package_ids:
-                # FIXME: This is a bit ugly
-                split_id = package_id.split(";", 4)
-                pkg = self.packagedb.get_package(split_id[0])
-                self.package(package_id, INFO_DOWNLOADING, pkg.summary)
-            self.percentage(100)
-
-            self.status(STATUS_INSTALL)
-            self.allow_cancel(False)
-            self.percentage(0)
-            for package_id in package_ids:
-                # FIXME: This is a bit ugly
-                split_id = package_id.split(";", 4)
-                pkg = self.packagedb.get_package(split_id[0])
-                self.package(package_id, INFO_INSTALLING, pkg.summary)
-
-            # Actually install
             pisi.api.install(packages)
-            self.percentage(100)
         except pisi.Error, e:
             self.error(ERROR_UNKNOWN, e)
+
         pisi.api.set_userinterface(self.saved_ui)
         self.finished()
 
@@ -693,8 +687,10 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
     def remove_packages(self, transaction_flags, package_ids,
                         allowdeps, autoremove):
         """ Removes given package from system"""
+        # FIXME: better remove progress e.g. get len of pkgs, get len of files per pkg
+        # get callback for extra autoremove deps
         self.allow_cancel(False)
-        self.percentage(0)
+        self.percentage(None)
         packages = list()
 
         for package_id in package_ids:
@@ -704,12 +700,19 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                            "Package is not installed")
             packages.append(package)
 
-        def progress_cb(**kw):
-            self.percentage(int(kw['percent']))
+        # Callback from pisi events
+        def status_cb(event, **keywords):
+            # FIXME: Ugly package splitting
+            split_id = package_id.split(";", 4)
+            pkg = self.packagedb.get_package(split_id[0])
+            if event == pisi.ui.removing:
+                self.status(STATUS_REMOVE)
+                self.package(package_id, INFO_REMOVING, pkg.summary)
 
         ui = SimplePisiHandler()
+        pisi.api.set_userinterface(ui)
 
-        self.status(STATUS_REMOVE)
+        ui.pisi_status = status_cb
 
         if TRANSACTION_FLAG_SIMULATE in transaction_flags:
             # Simulated, not real.
@@ -717,22 +720,15 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 self._report_all_for_package(package, remove=True)
             return
         try:
-            # Set status to keep pk happy, we need to get callbacks from
-            # pisi.api.{remove,install,upgrade} itself ideally.
-            for package_id in package_ids:
-                # FIXME: This is a bit ugly
-                split_id = package_id.split(";", 4)
-                pkg = self.packagedb.get_package(split_id[0])
-                self.package(package_id, INFO_REMOVING, pkg.summary)
-
             if autoremove:
                 pisi.api.autoremove(packages)
             else:
                 pisi.api.remove(packages)
         except pisi.Error, e:
             self.error(ERROR_CANNOT_REMOVE_SYSTEM_PACKAGE, e)
+
         pisi.api.set_userinterface(self.saved_ui)
-        self.percentage(100)
+        self.finished()
 
     def repo_enable(self, repoid, enable):
         self.status(STATUS_INFO)
@@ -843,8 +839,8 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         """ Updates given package to its latest version """
 
         # FIXME: use only_trusted
-        # FIXME: fetch/install progress
-        self.allow_cancel(False)
+        # FIXME: install progress
+        self.allow_cancel(True)
         self.percentage(None)
         self.status(STATUS_RUNNING)
 
@@ -859,34 +855,38 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         def progress_cb(**kw):
             self.percentage(int(kw['percent']))
 
+        def status_cb(event, **keywords):
+            # FIXME: Ugly package splitting
+            split_id = package_id.split(";", 4)
+            pkg = self.packagedb.get_package(split_id[0])
+            if event == pisi.ui.downloading:
+                self.status(STATUS_DOWNLOAD)
+                self.package(package_id, INFO_DOWNLOADING, pkg.summary)
+            elif event == pisi.ui.extracting or event == pisi.ui.installing:
+                self.status(STATUS_INSTALL)
+                self.percentage(None)
+                self.allow_cancel(False)
+                self.package(package_id, INFO_INSTALLING, pkg.summary)
+
         ui = SimplePisiHandler()
         pisi.api.set_userinterface(ui)
+
         ui.the_callback = progress_cb
+        ui.pisi_status = status_cb
 
         if TRANSACTION_FLAG_SIMULATE in transaction_flags:
             for package in packages:
                 self._report_all_for_package(package)
             return
 
-        self.allow_cancel(False)
-        self.status(STATUS_INSTALL)
-        self.percentage(0)
-
         try:
             # Actually upgrade
             pisi.api.upgrade(packages)
-
-            # We have to set the package status as installing to successfully complete the transaction
-            for package_id in package_ids:
-                # FIXME: This is a bit ugly
-                split_id = package_id.split(";", 4)
-                pkg = self.packagedb.get_package(split_id[0])
-                self.package(package_id, INFO_INSTALLING, pkg.summary)
-
         except Exception, e:
             self.error(ERROR_UNKNOWN, e)
+
         pisi.api.set_userinterface(self.saved_ui)
-        self.percentage(100)
+        self.finished()
 
 def main():
     backend = PackageKitPisiBackend('')
