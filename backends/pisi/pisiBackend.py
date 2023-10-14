@@ -572,6 +572,9 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         def status_cb(event, **keywords):
             if event == pisi.ui.extracting or event == pisi.ui.installing:
                 self.status(STATUS_INSTALL)
+                pkg = keywords["package"]
+                repo = self.packagedb.which_repo(pkg.name)
+                pkg_id = self.get_package_id(pkg.name, pkg.version, pkg.architecture, repo)
                 self.package(package_id, INFO_INSTALLING, pkg.summary)
 
         ui = SimplePisiHandler()
@@ -588,7 +591,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             self.error(ERROR_PACKAGE_ALREADY_INSTALLED, e)
 
         pisi.api.set_userinterface(self.saved_ui)
-        self.percentage(100)
+        self.finished()
 
     def _report_all_for_package(self, package, remove=False):
         """ Report all deps for the given package """
@@ -619,7 +622,6 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         """ Installs given package into system"""
 
         # FIXME: better fetch/install progress e.g. divide by len of packages
-        self.allow_cancel(True)
         self.percentage(None)
 
         packages = list()
@@ -632,21 +634,40 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                            "Package is already installed")
             packages.append(package)
 
+        # Python 2 alternative due to no nonlocal var, is there a better way?
+        # since we need to update it from status_cb
+        #class sliceofpkgs:
+        #    itslice = (100 / len(package_ids)) / 2
+        #    itpercent = 0
+
+        # FIXME: The percent stays pegged at 100% once pkgs are downloading
+        #        meaning we can't set a percentage for the install progress.
         def progress_cb(**kw):
             self.percentage(int(kw['percent']))
 
         def status_cb(event, **keywords):
-            # FIXME: Ugly package splitting
-            split_id = package_id.split(";", 4)
-            pkg = self.packagedb.get_package(split_id[0])
+            # FIXME: Use this in order to get install progress
+            #if event == pisi.ui.packagestogo:
+            #    sliceofpkgs.dlslice = (100 / len(keywords["order"])) / 2
+            #    sliceofpkgs.itslice = (100 / len(keywords["order"])) / 2
+
             if event == pisi.ui.downloading:
                 self.status(STATUS_DOWNLOAD)
-                self.package(package_id, INFO_DOWNLOADING, pkg.summary)
-            elif event == pisi.ui.extracting or event == pisi.ui.installing:
+                pkg = keywords["package"]
+                repo = self.packagedb.which_repo(pkg.name)
+                pkg_id = self.get_package_id(pkg.name, pkg.version, pkg.architecture, repo)
+                self.package(pkg_id, INFO_DOWNLOADING, pkg.summary)
+
+            if event == pisi.ui.extracting or event == pisi.ui.installing:
                 self.status(STATUS_INSTALL)
                 self.percentage(None)
-                self.allow_cancel(False)
-                self.package(package_id, INFO_INSTALLING, pkg.summary)
+                pkg = keywords["package"]
+                repo = self.packagedb.which_repo(pkg.name)
+                pkg_id = self.get_package_id(pkg.name, pkg.version, pkg.architecture, repo)
+                self.package(pkg_id, INFO_INSTALLING, pkg.summary)
+
+                #sliceofpkgs.itpercent += sliceofpkgs.itslice
+                #self.percentage(sliceofpkgs.itpercent)
 
         ui = SimplePisiHandler()
         pisi.api.set_userinterface(ui)
@@ -705,12 +726,12 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
 
         # Callback from pisi events
         def status_cb(event, **keywords):
-            # FIXME: Ugly package splitting
-            split_id = package_id.split(";", 4)
-            pkg = self.packagedb.get_package(split_id[0])
             if event == pisi.ui.removing:
                 self.status(STATUS_REMOVE)
-                self.package(package_id, INFO_REMOVING, pkg.summary)
+                pkg = keywords["package"]
+                repo = self.packagedb.which_repo(pkg.name)
+                pkg_id = self.get_package_id(pkg.name, pkg.version, pkg.architecture, repo)
+                self.package(pkg_id, INFO_REMOVING, pkg.summary)
 
         ui = SimplePisiHandler()
         pisi.api.set_userinterface(ui)
@@ -859,17 +880,20 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             self.percentage(int(kw['percent']))
 
         def status_cb(event, **keywords):
-            # FIXME: Ugly package splitting
-            split_id = package_id.split(";", 4)
-            pkg = self.packagedb.get_package(split_id[0])
             if event == pisi.ui.downloading:
                 self.status(STATUS_DOWNLOAD)
-                self.package(package_id, INFO_DOWNLOADING, pkg.summary)
-            elif event == pisi.ui.extracting or event == pisi.ui.installing:
+                pkg = keywords["package"]
+                repo = self.packagedb.which_repo(pkg.name)
+                pkg_id = self.get_package_id(pkg.name, pkg.version, pkg.architecture, repo)
+                self.package(pkg_id, INFO_DOWNLOADING, pkg.summary)
+
+            if event == pisi.ui.extracting or event == pisi.ui.installing:
                 self.status(STATUS_INSTALL)
                 self.percentage(None)
-                self.allow_cancel(False)
-                self.package(package_id, INFO_INSTALLING, pkg.summary)
+                pkg = keywords["package"]
+                repo = self.packagedb.which_repo(pkg.name)
+                pkg_id = self.get_package_id(pkg.name, pkg.version, pkg.architecture, repo)
+                self.package(pkg_id, INFO_INSTALLING, pkg.summary)
 
         ui = SimplePisiHandler()
         pisi.api.set_userinterface(ui)
