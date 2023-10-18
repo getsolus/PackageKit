@@ -570,10 +570,11 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         self.percentage(None)
 
         def status_cb(event, **keywords):
-            if event == pisi.ui.extracting or event == pisi.ui.installing:
+            if event == pisi.ui.installing:
                 self.status(STATUS_INSTALL)
                 pkg = keywords["package"]
-                repo = self.packagedb.which_repo(pkg.name)
+                # FIXME: we can't use self.packagedb here as it interferes with atomicoperations
+                repo = pisi.db.packagedb.PackageDB().which_repo(pkg.name)
                 pkg_id = self.get_package_id(pkg.name, pkg.version, pkg.architecture, repo)
                 self.package(package_id, INFO_INSTALLING, pkg.summary)
 
@@ -640,7 +641,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         #    itslice = (100 / len(package_ids)) / 2
         #    itpercent = 0
 
-        # FIXME: The percent stays pegged at 100% once pkgs are downloading
+        # FIXME: The percent stays pegged at 100% once pkgs are downloaded
         #        meaning we can't set a percentage for the install progress.
         def progress_cb(**kw):
             self.percentage(int(kw['percent']))
@@ -654,15 +655,16 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             if event == pisi.ui.downloading:
                 self.status(STATUS_DOWNLOAD)
                 pkg = keywords["package"]
-                repo = self.packagedb.which_repo(pkg.name)
+                # FIXME: we can't use self.packagedb here as it interferes with atomicoperations
+                repo = pisi.db.packagedb.PackageDB().which_repo(pkg.name)
                 pkg_id = self.get_package_id(pkg.name, pkg.version, pkg.architecture, repo)
                 self.package(pkg_id, INFO_DOWNLOADING, pkg.summary)
-
-            if event == pisi.ui.extracting or event == pisi.ui.installing:
+            if event == pisi.ui.installing:
                 self.status(STATUS_INSTALL)
                 self.percentage(None)
                 pkg = keywords["package"]
-                repo = self.packagedb.which_repo(pkg.name)
+                # FIXME: we can't use self.packagedb here as it interferes with atomicoperations
+                repo = pisi.db.packagedb.PackageDB().which_repo(pkg.name)
                 pkg_id = self.get_package_id(pkg.name, pkg.version, pkg.architecture, repo)
                 self.package(pkg_id, INFO_INSTALLING, pkg.summary)
 
@@ -672,8 +674,8 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         ui = SimplePisiHandler()
         pisi.api.set_userinterface(ui)
 
-        ui.the_callback = progress_cb
         ui.pisi_status = status_cb
+        ui.the_callback = progress_cb
 
         if TRANSACTION_FLAG_SIMULATE in transaction_flags:
             for package in packages:
@@ -689,7 +691,6 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             self.error(ERROR_UNKNOWN, e)
 
         pisi.api.set_userinterface(self.saved_ui)
-        self.finished()
 
     def refresh_cache(self, force):
         """ Updates repository indexes """
@@ -724,18 +725,25 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                            "Package is not installed")
             packages.append(package)
 
+        # FIXME: The percent stays pegged at 100% once pkgs are downloaded
+        #        meaning we can't set a percentage for the install progress.
+        def progress_cb(**kw):
+            self.percentage(int(kw['percent']))
+
         # Callback from pisi events
         def status_cb(event, **keywords):
             if event == pisi.ui.removing:
                 self.status(STATUS_REMOVE)
                 pkg = keywords["package"]
-                repo = self.packagedb.which_repo(pkg.name)
+                # FIXME: we can't use self.packagedb here as it interferes with atomicoperations
+                repo = pisi.db.packagedb.PackageDB().which_repo(pkg.name)
                 pkg_id = self.get_package_id(pkg.name, pkg.version, pkg.architecture, repo)
                 self.package(pkg_id, INFO_REMOVING, pkg.summary)
 
         ui = SimplePisiHandler()
         pisi.api.set_userinterface(ui)
 
+        ui.the_callback = progress_cb
         ui.pisi_status = status_cb
 
         if TRANSACTION_FLAG_SIMULATE in transaction_flags:
@@ -752,7 +760,6 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             self.error(ERROR_CANNOT_REMOVE_SYSTEM_PACKAGE, e)
 
         pisi.api.set_userinterface(self.saved_ui)
-        self.finished()
 
     def repo_enable(self, repoid, enable):
         self.status(STATUS_INFO)
@@ -883,15 +890,17 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             if event == pisi.ui.downloading:
                 self.status(STATUS_DOWNLOAD)
                 pkg = keywords["package"]
-                repo = self.packagedb.which_repo(pkg.name)
+                # FIXME: we can't use self.packagedb here as it interferes with atomicoperations
+                repo = pisi.db.packagedb.PackageDB().which_repo(pkg.name)
                 pkg_id = self.get_package_id(pkg.name, pkg.version, pkg.architecture, repo)
                 self.package(pkg_id, INFO_DOWNLOADING, pkg.summary)
 
-            if event == pisi.ui.extracting or event == pisi.ui.installing:
+            if event == pisi.ui.installing:
                 self.status(STATUS_INSTALL)
                 self.percentage(None)
                 pkg = keywords["package"]
-                repo = self.packagedb.which_repo(pkg.name)
+                # FIXME: we can't use self.packagedb here as it interferes with atomicoperations
+                repo = pisi.db.packagedb.PackageDB().which_repo(pkg.name)
                 pkg_id = self.get_package_id(pkg.name, pkg.version, pkg.architecture, repo)
                 self.package(pkg_id, INFO_INSTALLING, pkg.summary)
 
@@ -916,7 +925,6 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             self.error(ERROR_UNKNOWN, e)
 
         pisi.api.set_userinterface(self.saved_ui)
-        self.finished()
 
 def main():
     backend = PackageKitPisiBackend('')
