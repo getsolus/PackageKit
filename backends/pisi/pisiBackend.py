@@ -691,6 +691,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             self.error(ERROR_UNKNOWN, e)
 
         pisi.api.set_userinterface(self.saved_ui)
+        self.finished()
 
     def refresh_cache(self, force):
         """ Updates repository indexes """
@@ -760,6 +761,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             self.error(ERROR_CANNOT_REMOVE_SYSTEM_PACKAGE, e)
 
         pisi.api.set_userinterface(self.saved_ui)
+        self.finished()
 
     def repo_enable(self, repoid, enable):
         self.status(STATUS_INFO)
@@ -925,6 +927,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             self.error(ERROR_UNKNOWN, e)
 
         pisi.api.set_userinterface(self.saved_ui)
+        self.finished()
 
 def main():
     backend = PackageKitPisiBackend('')
