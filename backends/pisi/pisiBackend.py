@@ -42,6 +42,7 @@ from packagekit import enums
 import os.path
 import piksemel
 from collections import Counter
+from operator import attrgetter
 import re
 
 # Override PiSi UI so we can get callbacks for progress and events
@@ -419,30 +420,34 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         self.allow_cancel(True)
         self.percentage(None)
 
-        self._updates = dict()
         for package in pisi.api.list_upgradable():
             pkg, repo = self.packagedb.get_package_repo(package, None)
             version = self.__get_package_version(pkg)
             id = self.get_package_id(pkg.name, version, pkg.architecture, repo)
             installed_package = self.installdb.get_package(package)
-            pindex = "/var/lib/eopkg/index/%s/eopkg-index.xml" % repo
 
-            self._updates[pkg.name] = \
-                self._extract_update_details(pindex, pkg.name)
-            bug_uri = self._updates[pkg.name][3]
+            oldRelease = int(installed_package.release)
+            histories = self._get_history_between(oldRelease, pkg)
 
-            # FIXME: PiSi must provide this information as a single API call :(
-            updates = [i for i in self.packagedb.get_package(package).history
-                       if pisi.version.Version(i.release) >
-                       installed_package.release]
-            if pisi.util.any(lambda i: i.type == "security", updates):
+            securities = [x for x in histories if x.type == "security"]
+            # FIXME: INFO_BUGFIX Support? We would have to match against #123 Github issues
+            if len(securities) > 0:
                 self.package(id, INFO_SECURITY, pkg.summary)
-            elif bug_uri != "":
-                self.package(id, INFO_BUGFIX, pkg.summary)
             else:
                 self.package(id, INFO_NORMAL, pkg.summary)
 
+    def _get_history_between(self, old_release, new):
+        """ Get the history items between the old release and new pkg """
+        ret = list()
+
+        for i in new.history:
+            if int(i.release) <= int(old_release):
+                continue
+            ret.append(i)
+        return sorted(ret, key=attrgetter('release'), reverse=True)
+
     def _extract_update_details(self, pindex, package_name):
+        # FIXME: This is fucking stupid, why parse >100k xml file for _every update_
         document = piksemel.parse(pindex)
         packages = document.tags("Package")
         for pkg in packages:
