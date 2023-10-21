@@ -494,16 +494,26 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             pkg, repo = self.packagedb.get_package_repo(package, None)
             version = self.__get_package_version(pkg)
             id = self.get_package_id(pkg.name, version, pkg.architecture, repo)
-            pindex = "/var/lib/eopkg/index/%s/eopkg-index.xml" % repo
 
             updates = [package_id]
             obsoletes = ""
+
             package_url = pkg.source.homepage
             vendor_url = package_url if package_url is not None else ""
 
+            update_message = pkg.history[0].comment
+            update_message = update_message.replace("\n", ";")
+
+            updated_date = pkg.history[0].date
+
+            bugURI = ""
+
             changelog = ""
-            update_message, updated_date, needsReboot, bugURI = \
-                self._extract_update_details(pindex, pkg.name)
+            # FIXME: Works but output is fugly
+            #for i in pkg.history:
+            #    comment = i.comment
+            #    comment = comment.replace("\n", ";")
+            #    changelog.append(comment)
 
             cves = re.findall(r" (CVE\-[0-9]+\-[0-9]+)", str(update_message))
             cve_url = ""
@@ -511,13 +521,15 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 #cve_url = "https://cve.mitre.org/cgi-bin/cvename.cgi?name={}".format(cves[0])
                 cve_url = cves
 
-            # TODO: Add tagging to repo's, or a mapping file
+            # TODO: If repo is unstable and package.release not in shannon then UNSTABLE
             state = UPDATE_STATE_STABLE
-            reboot = "system" if needsReboot else "none"
+            reboot = "none"
 
             # TODO: Eopkg doesn't provide any time
             split_date = updated_date.split("-")
             updated = "{}-{}-{}T00:00:00".format(split_date[0], split_date[1], split_date[2])
+            # TODO: The index only stores the last 10 history entries.
+            #       What is the difference between issued and updated?
             issued = ""
 
             self.update_detail(package_id, updates, obsoletes, vendor_url,
