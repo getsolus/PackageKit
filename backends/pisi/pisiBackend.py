@@ -798,7 +798,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         """ Prints a detailed list of packages contains search term """
         self.allow_cancel(True)
         self.percentage(None)
-        self.status(STATUS_INFO)
+        self.status(STATUS_QUERY)
 
         # Internal FIXME: Use search_details instead of _package when API
         # gains that ability :)
@@ -809,7 +809,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         """ Prints the installed package which contains the specified file """
         self.allow_cancel(True)
         self.percentage(None)
-        self.status(STATUS_INFO)
+        self.status(STATUS_QUERY)
 
         for value in values:
             # Internal FIXME: Why it is needed?
@@ -822,7 +822,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         """ Prints a list of packages belongs to searched group """
         self.allow_cancel(True)
         self.percentage(None)
-        self.status(STATUS_INFO)
+        self.status(STATUS_QUERY)
 
         for value in values:
             packages = list()
@@ -841,7 +841,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         """ Prints a list of packages contains search term in its name """
         self.allow_cancel(True)
         self.percentage(None)
-        self.status(STATUS_INFO)
+        self.status(STATUS_QUERY)
 
         for value in values:
             for pkg in pisi.api.search_package([value]):
