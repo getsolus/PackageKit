@@ -789,7 +789,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         for package in packages:
             pkg = self.get_package_from_id(package)[0]
             try:
-                # FIXME: HACKY HACKY
+                # FIXME: Hack for newest filter to work correctly (i think)
                 if filters is not None and FILTER_NEWEST in filters:
                     self.__get_package(pkg, FILTER_NOT_INSTALLED)
                 self.__get_package(pkg, filters)
