@@ -291,7 +291,9 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             homepage = pkg.source.homepage if pkg.source.homepage is not None\
                 else ''
 
-            self.details(pkg_id, pkg.summary, ",".join(pkg.license), group, pkg.description,
+            description = str(pkg.description).replace('\n', " ")
+
+            self.details(pkg_id, pkg.summary, ",".join(pkg.license), group, description,
                             homepage, size)
 
     def get_details_local(self, files):
