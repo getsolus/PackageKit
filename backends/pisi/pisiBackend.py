@@ -113,7 +113,6 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             try:
                 func(*__args,**__kw)
             except KeyboardInterrupt:
-                cancelled()
                 return
             except Exception, e:
                 return
