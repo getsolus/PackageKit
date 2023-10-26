@@ -105,6 +105,20 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         else:
             self.groups = {}
 
+    def privileged(func):
+        """
+        Decorator for synchronizing privileged functions
+        """
+        def wrapper(*__args,**__kw):
+            try:
+                func(*__args,**__kw)
+            except KeyboardInterrupt:
+                cancelled()
+                return
+            except Exception, e:
+                return
+        return wrapper
+
     def __get_package_version(self, package):
         """ Returns version string of given package """
         # Internal FIXME: PiSi may provide this
@@ -500,6 +514,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                                bugURI, cve_url, reboot, update_message,
                                changelog, state, issued, updated)
 
+    @privileged
     def download_packages(self, directory, package_ids):
         """ Download the given packages to a directory """
         self.allow_cancel(True)
@@ -542,6 +557,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                        "Could not download package: %s" % e)
         self.finished()
 
+    @privileged
     def install_files(self, only_trusted, files):
         """ Installs given package into system"""
 
@@ -600,6 +616,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                                                  dep_pkg.architecture, repo[1])
                     self.package(pkg_id, INFO_REMOVING, dep_pkg.summary)
 
+    @privileged
     def install_packages(self, transaction_flags, package_ids):
         """ Installs given package into system"""
 
@@ -674,6 +691,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         pisi.api.set_userinterface(self.saved_ui)
         self.finished()
 
+    @privileged
     def refresh_cache(self, force):
         """ Updates repository indexes """
         # TODO: use force ?
@@ -691,6 +709,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
 
         self.percentage(100)
 
+    @privileged
     def remove_packages(self, transaction_flags, package_ids,
                         allowdeps, autoremove):
         """ Removes given package from system"""
@@ -744,6 +763,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         pisi.api.set_userinterface(self.saved_ui)
         self.finished()
 
+    @privileged
     def repo_enable(self, repoid, enable):
         self.status(STATUS_INFO)
         self.allow_cancel(True)
@@ -754,6 +774,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         else:
             self.error(ERROR_REPO_NOT_FOUND, "Repository %s was not found" % repoid)
 
+    @privileged
     def repo_set_data(self, repo_id, parameter, value):
         """ Sets a parameter for the repository specified """
         self.allow_cancel(False)
@@ -849,6 +870,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             for pkg in pisi.api.search_package([value]):
                 self.__get_package(pkg, filters)
 
+    @privileged
     def update_packages(self, transaction_flags, package_ids):
         """ Updates given package to its latest version """
 
