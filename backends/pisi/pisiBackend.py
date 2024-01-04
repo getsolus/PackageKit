@@ -736,7 +736,11 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 self.status(STATUS_REMOVE)
                 pkg = keywords["package"]
                 # FIXME: we can't use self.packagedb here as it interferes with atomicoperations
-                repo = pisi.db.packagedb.PackageDB().which_repo(pkg.name)
+                # FIXME: ugly installed hack
+                try:
+                    repo = pisi.db.packagedb.PackageDB().which_repo(pkg.name)
+                except Exception as e:
+                    repo = "installed"
                 pkg_id = self.get_package_id(pkg.name, pkg.version, pkg.architecture, repo)
                 self.package(pkg_id, INFO_REMOVING, pkg.summary)
 
