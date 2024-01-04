@@ -400,6 +400,12 @@ pk_backend_repo_set_data (PkBackend *backend, PkBackendJob *job, const gchar *ri
     pk_backend_spawn_helper (spawn, job, "pisiBackend.py", "repo-set-data", rid, parameter, value, NULL);
 }
 
+gboolean
+pk_backend_supports_parallelization (PkBackend *backend)
+{
+    return FALSE;
+}
+
 const gchar *
 pk_backend_get_description (PkBackend *backend)
 {
