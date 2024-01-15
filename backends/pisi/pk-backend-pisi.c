@@ -347,12 +347,13 @@ pk_backend_update_packages (PkBackend *backend, PkBackendJob *job, PkBitfield tr
     gchar *package_ids_temp;
     gchar *transaction_flags_temp;
 
-    /* check network state */
-    if (!pk_backend_is_online (backend)) {
+    /* Disable network check for now to allow for offline updates */
+    /* TODO: Can we check transaction_flags or something here for that case? */
+    /*if (!pk_backend_is_online (backend)) {
         pk_backend_job_error_code (job, PK_ERROR_ENUM_NO_NETWORK, "Cannot install when offline");
         pk_backend_job_finished (job);
         return;
-    }
+    }*/
 
     /* send the complete list as stdin */
     package_ids_temp = pk_package_ids_to_string (package_ids);
