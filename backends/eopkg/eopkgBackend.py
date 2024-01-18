@@ -59,7 +59,7 @@ class SimplePisiHandler(pisi.ui.UI):
 
 class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
 
-    SETTINGS_FILE = "/etc/PackageKit/pisi.d/groups.list"
+    SETTINGS_FILE = "/etc/PackageKit/eopkg.d/groups.list"
 
     def __init__(self, args):
         self.bug_regex = None
