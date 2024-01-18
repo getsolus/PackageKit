@@ -96,5 +96,5 @@ xorg.proto          = programming
 xorg.server         = desktop-other
 
 #FIXME:
-Bug-Regex = Bug-PisiLinux: T(\d+)
-Bug-URI = https://www.pisilinux.org/T%s
+Bug-Regex = Bug-Solus: T(\d+)
+Bug-URI = https://issues.getsol.us
