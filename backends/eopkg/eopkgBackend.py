@@ -436,7 +436,10 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         self.percentage(None)
 
         for package in pisi.api.list_upgradable():
-            pkg, repo = self.packagedb.get_package_repo(package, None)
+            # FIXME: we need to handle replaces here more effectively
+            if self.packagedb.has_package(package):
+                pkg, repo = self.packagedb.get_package_repo(package, None)
+
             version = self.__get_package_version(pkg)
             id = self.get_package_id(pkg.name, version, pkg.architecture, repo)
             installed_package = self.installdb.get_package(package)
