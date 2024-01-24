@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 #
 # Licensed under the GNU General Public License Version 2
@@ -40,7 +40,6 @@ from packagekit.backend import *
 from packagekit.package import PackagekitPackage
 from packagekit import enums
 import os.path
-import piksemel
 from collections import Counter
 from operator import attrgetter
 import re
@@ -114,7 +113,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 func(*__args,**__kw)
             except KeyboardInterrupt:
                 return
-            except Exception, e:
+            except Exception as e:
                 return
         return wrapper
 
@@ -251,7 +250,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             #    icon = "image-missing"
 
             cat_id = component.name  # same thing
-            self.category(component.group, cat_id, component.name, unicode(component.summary), "image-missing")
+            self.category(component.group, cat_id, component.name, str(component.summary), "image-missing")
 
     def repair_system(self, transaction_flags):
         '''
@@ -320,7 +319,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 self.error(ERROR_PACKAGE_NOT_FOUND, "Eopkg %s was not found" % f)
             try:
                 metadata, files = pisi.api.info_file(f)
-            except PkError, e:
+            except PkError as e:
                 if e.code == ERROR_PACKAGE_NOT_FOUND:
                     self.message('COULD_NOT_FIND_PACKAGE', e.details)
                     continue
@@ -363,7 +362,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
 
                 pkg = self.installdb.get_files(package)
 
-                files = map(lambda y: "/%s" % y.path, pkg.list)
+                files = ["/%s" % y.path for y in pkg.list]
 
                 file_list = ";".join(files)
                 self.files(pkg_id, file_list)
@@ -554,7 +553,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 location = os.path.join(directory, uri)
                 self.files(package_id, location)
             pisi.api.set_userinterface(self.saved_ui)
-        except Exception, e:
+        except Exception as e:
             self.error(ERROR_PACKAGE_DOWNLOAD_FAILED,
                        "Could not download package: %s" % e)
         self.finished()
@@ -585,7 +584,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         try:
             # Actually install
             pisi.api.install(files)
-        except pisi.Error, e:
+        except pisi.Error as e:
             # FIXME: Error: internal-error : Package re-install declined
             # Force needed?
             self.error(ERROR_PACKAGE_ALREADY_INSTALLED, e)
@@ -688,7 +687,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
 
         try:
             pisi.api.install(packages)
-        except pisi.Error, e:
+        except pisi.Error as e:
             self.error(ERROR_UNKNOWN, e)
 
         pisi.api.set_userinterface(self.saved_ui)
@@ -764,7 +763,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 pisi.api.autoremove(packages)
             else:
                 pisi.api.remove(packages)
-        except pisi.Error, e:
+        except pisi.Error as e:
             self.error(ERROR_CANNOT_REMOVE_SYSTEM_PACKAGE, e)
 
         pisi.api.set_userinterface(self.saved_ui)
@@ -790,7 +789,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         if parameter == "add-repo":
             try:
                 pisi.api.add_repo(repo_id, value)
-            except pisi.Error, e:
+            except pisi.Error as e:
                 self.error(ERROR_UNKNOWN, e)
 
             try:
@@ -933,7 +932,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         try:
             # Actually upgrade
             pisi.api.upgrade(packages)
-        except Exception, e:
+        except Exception as e:
             self.error(ERROR_UNKNOWN, e)
 
         pisi.api.set_userinterface(self.saved_ui)
