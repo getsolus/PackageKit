@@ -637,20 +637,21 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
 
         # Python 2 alternative due to no nonlocal var, is there a better way?
         # since we need to update it from status_cb
-        #class sliceofpkgs:
-        #    itslice = (100 / len(package_ids)) / 2
-        #    itpercent = 0
+        class sliceofpkgs:
+            itslice = (100 / len(package_ids)) / 2
+            itpercent = 0
 
-        # FIXME: The percent stays pegged at 100% once pkgs are downloaded
-        #        meaning we can't set a percentage for the install progress.
         def progress_cb(**kw):
-            self.percentage(int(kw['percent']))
+            # Once the pkg is downloaded we continue to get callbacks at 100%
+            # effectively hijacking the progress bar. Let's stop that.
+            if int(kw['percent']) < 100:
+                self.percentage(int(kw['percent']))
 
         def status_cb(event, **keywords):
             # FIXME: Use this in order to get install progress
-            #if event == pisi.ui.packagestogo:
-            #    sliceofpkgs.dlslice = (100 / len(keywords["order"])) / 2
-            #    sliceofpkgs.itslice = (100 / len(keywords["order"])) / 2
+            if event == pisi.ui.packagestogo:
+                #sliceofpkgs.dlslice = (100 / len(keywords["order"])) / 2
+                sliceofpkgs.itslice = (100 / len(keywords["order"])) / 1
 
             if event == pisi.ui.downloading:
                 self.status(STATUS_DOWNLOAD)
@@ -661,15 +662,15 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 self.package(pkg_id, INFO_DOWNLOADING, pkg.summary)
             if event == pisi.ui.installing:
                 self.status(STATUS_INSTALL)
-                self.percentage(None)
                 pkg = keywords["package"]
                 # FIXME: we can't use self.packagedb here as it interferes with atomicoperations
                 repo = pisi.db.packagedb.PackageDB().which_repo(pkg.name)
                 pkg_id = self.get_package_id(pkg.name, pkg.version, pkg.architecture, repo)
                 self.package(pkg_id, INFO_INSTALLING, pkg.summary)
 
-                #sliceofpkgs.itpercent += sliceofpkgs.itslice
-                #self.percentage(sliceofpkgs.itpercent)
+                sliceofpkgs.itpercent += sliceofpkgs.itslice
+                if sliceofpkgs.itpercent < 100:
+                    self.percentage(sliceofpkgs.itpercent)
 
         ui = SimplePisiHandler()
         pisi.api.set_userinterface(ui)
