@@ -25,24 +25,25 @@
 
 static PkBackendSpawn *spawn;
 
-void eopkg_get_backend_filename(char *);
+static const gchar *eopkg_get_backend_filename ();
 
-void
-eopkg_get_backend_filename(char *backend_filename)
+static const gchar
+*eopkg_get_backend_filename ()
 {
-    // char backend_filename = malloc(sizeof(char));
-    if (access("/usr/share/PackageKit/helpers/eopkg/eopkgBackend.bin", F_OK) == 0) {
-        strcpy(backend_filename, "eopkgBackend.bin");
+    if (g_file_test ("/usr/share/PackageKit/helpers/eopkg/eopkgBackend.bin", G_FILE_TEST_EXISTS)) {
+        return "eopkgBackend.bin";
     } else {
-        strcpy(backend_filename, "eopkgBackend.py");
+        return "eopkgBackend.py";
     };
 }
 
 void
 pk_backend_repair_system (PkBackend *backend, PkBackendJob *job, PkBitfield transaction_flags)
 {
-    char backend_filename[30];
-    eopkg_get_backend_filename(backend_filename);
+    const gchar *backend_filename = NULL;
+
+    backend_filename = eopkg_get_backend_filename ();
+
     pk_backend_spawn_helper (spawn, job, backend_filename, "repair_system", NULL);
     pk_backend_job_finished (job);
 }
@@ -137,12 +138,12 @@ pk_backend_cancel (PkBackend *backend, PkBackendJob *job)
 void
 pk_backend_download_packages (PkBackend *backend, PkBackendJob *job, gchar **package_ids, const gchar *directory)
 {
-    char backend_filename[30];
+    const gchar *backend_filename = NULL;
     gchar *package_ids_temp;
 
-    eopkg_get_backend_filename(backend_filename);
     /* send the complete list as stdin */
     package_ids_temp = pk_package_ids_to_string (package_ids);
+    backend_filename = eopkg_get_backend_filename ();
     pk_backend_spawn_helper (spawn, job, backend_filename, "download-packages", directory, package_ids_temp, NULL);
     g_free (package_ids_temp);
 }
@@ -150,8 +151,9 @@ pk_backend_download_packages (PkBackend *backend, PkBackendJob *job, gchar **pac
 void
 pk_backend_get_categories (PkBackend *backend, PkBackendJob *job)
 {
-    char backend_filename[30];
-    eopkg_get_backend_filename(backend_filename);
+    const gchar *backend_filename = NULL;
+
+    backend_filename = eopkg_get_backend_filename ();
 
     pk_backend_spawn_helper (spawn, job, backend_filename, "get-categories", NULL);
 }
@@ -159,10 +161,11 @@ pk_backend_get_categories (PkBackend *backend, PkBackendJob *job)
 void
 pk_backend_depends_on (PkBackend *backend, PkBackendJob *job, PkBitfield filters, gchar **package_ids, gboolean recursive)
 {
-    char backend_filename[30];
+    const gchar *backend_filename = NULL;
     gchar *filters_text;
     gchar *package_ids_temp;
-    eopkg_get_backend_filename(backend_filename);
+
+    backend_filename = eopkg_get_backend_filename ();
     package_ids_temp = pk_package_ids_to_string (package_ids);
     filters_text = pk_filter_bitfield_to_string (filters);
     pk_backend_spawn_helper (spawn, job, backend_filename, "depends-on", filters_text, package_ids_temp, pk_backend_bool_to_string (recursive), NULL);
@@ -173,9 +176,10 @@ pk_backend_depends_on (PkBackend *backend, PkBackendJob *job, PkBitfield filters
 void
 pk_backend_get_details (PkBackend *backend, PkBackendJob *job, gchar **package_ids)
 {
-    char backend_filename[30];
+    const gchar *backend_filename = NULL;
     gchar *package_ids_temp;
-    eopkg_get_backend_filename(backend_filename);
+
+    backend_filename = eopkg_get_backend_filename ();
     package_ids_temp = pk_package_ids_to_string (package_ids);
     pk_backend_spawn_helper (spawn, job, backend_filename, "get-details", package_ids_temp, NULL);
     g_free (package_ids_temp);
@@ -184,9 +188,10 @@ pk_backend_get_details (PkBackend *backend, PkBackendJob *job, gchar **package_i
 void
 pk_backend_get_details_local (PkBackend *backend, PkBackendJob *job, gchar **files)
 {
-    char backend_filename[30];
+    const gchar *backend_filename = NULL;
     gchar *package_ids_temp;
-    eopkg_get_backend_filename(backend_filename);
+
+    backend_filename = eopkg_get_backend_filename ();
     package_ids_temp = pk_package_ids_to_string (files);
     pk_backend_spawn_helper (spawn, job, backend_filename, "get-details-local", package_ids_temp, NULL);
     g_free (package_ids_temp);
@@ -201,9 +206,10 @@ pk_backend_get_distro_upgrades (PkBackend *backend, PkBackendJob *job)
 void
 pk_backend_get_files (PkBackend *backend, PkBackendJob *job, gchar **package_ids)
 {
-    char backend_filename[30];
+    const gchar *backend_filename = NULL;
     gchar *package_ids_temp;
-    eopkg_get_backend_filename(backend_filename);
+
+    backend_filename = eopkg_get_backend_filename ();
     package_ids_temp = pk_package_ids_to_string (package_ids);
     pk_backend_spawn_helper (spawn, job, backend_filename, "get-files", package_ids_temp, NULL);
     g_free (package_ids_temp);
@@ -212,10 +218,11 @@ pk_backend_get_files (PkBackend *backend, PkBackendJob *job, gchar **package_ids
 void
 pk_backend_required_by (PkBackend *backend, PkBackendJob *job, PkBitfield filters, gchar **package_ids, gboolean recursive)
 {
-    char backend_filename[30];
+    const gchar *backend_filename = NULL;
     gchar *filters_text;
     gchar *package_ids_temp;
-    eopkg_get_backend_filename(backend_filename);
+
+    backend_filename = eopkg_get_backend_filename ();
     package_ids_temp = pk_package_ids_to_string (package_ids);
     filters_text = pk_filter_bitfield_to_string (filters);
     pk_backend_spawn_helper (spawn, job, backend_filename, "required-by", filters_text, package_ids_temp, pk_backend_bool_to_string (recursive), NULL);
@@ -226,9 +233,9 @@ pk_backend_required_by (PkBackend *backend, PkBackendJob *job, PkBitfield filter
 void
 pk_backend_get_updates (PkBackend *backend, PkBackendJob *job, PkBitfield filters)
 {
-    char backend_filename[30];
+    const gchar *backend_filename = NULL;
     gchar *filters_text;
-    eopkg_get_backend_filename(backend_filename);
+    backend_filename = eopkg_get_backend_filename ();
     filters_text = pk_filter_bitfield_to_string (filters);
     pk_backend_spawn_helper (spawn, job, backend_filename, "get-updates", filters_text, NULL);
     g_free (filters_text);
@@ -237,9 +244,9 @@ pk_backend_get_updates (PkBackend *backend, PkBackendJob *job, PkBitfield filter
 void
 pk_backend_get_update_detail (PkBackend *backend, PkBackendJob *job, gchar **package_ids)
 {
-    char backend_filename[30];
+    const gchar *backend_filename = NULL;
     gchar *package_ids_temp;
-    eopkg_get_backend_filename(backend_filename);
+    backend_filename = eopkg_get_backend_filename ();
     package_ids_temp = pk_package_ids_to_string (package_ids);
     pk_backend_spawn_helper (spawn, job, backend_filename, "get-update-detail", package_ids_temp, NULL);
     g_free (package_ids_temp);
@@ -248,10 +255,9 @@ pk_backend_get_update_detail (PkBackend *backend, PkBackendJob *job, gchar **pac
 void
 pk_backend_install_packages (PkBackend *backend, PkBackendJob *job, PkBitfield transaction_flags, gchar **package_ids)
 {
-    char backend_filename[30];
+    const gchar *backend_filename = NULL;
     gchar *package_ids_temp;
     gchar *transaction_flags_temp;
-    eopkg_get_backend_filename(backend_filename);
 
     /* check network state */
     if (!pk_backend_is_online (backend)) {
@@ -264,6 +270,8 @@ pk_backend_install_packages (PkBackend *backend, PkBackendJob *job, PkBitfield t
     package_ids_temp = pk_package_ids_to_string (package_ids);
     transaction_flags_temp = pk_transaction_flag_bitfield_to_string (transaction_flags);
 
+    backend_filename = eopkg_get_backend_filename ();
+
     pk_backend_spawn_helper (spawn, job, backend_filename, "install-packages", transaction_flags_temp, package_ids_temp, NULL);
     g_free (package_ids_temp);
     g_free (transaction_flags_temp);
@@ -272,14 +280,14 @@ pk_backend_install_packages (PkBackend *backend, PkBackendJob *job, PkBitfield t
 void
 pk_backend_install_files (PkBackend *backend, PkBackendJob *job, PkBitfield transaction_flags, gchar **full_paths)
 {
-    char backend_filename[30];
+    const gchar *backend_filename = NULL;
     gchar *package_ids_temp;
     gchar *transaction_flags_temp;
-    eopkg_get_backend_filename(backend_filename);
 
     /* send the complete list as stdin */
     package_ids_temp = g_strjoinv (PK_BACKEND_SPAWN_FILENAME_DELIM, full_paths);
     transaction_flags_temp = pk_transaction_flag_bitfield_to_string (transaction_flags);
+    backend_filename = eopkg_get_backend_filename ();
 
     pk_backend_spawn_helper (spawn, job, backend_filename, "install-files", transaction_flags_temp, package_ids_temp, NULL);
     g_free (package_ids_temp);
@@ -289,8 +297,7 @@ pk_backend_install_files (PkBackend *backend, PkBackendJob *job, PkBitfield tran
 void
 pk_backend_refresh_cache (PkBackend *backend, PkBackendJob *job, gboolean force)
 {
-    char backend_filename[30];
-    eopkg_get_backend_filename(backend_filename);
+    const gchar *backend_filename = NULL;
 
     /* check network state */
     if (!pk_backend_is_online (backend)) {
@@ -298,6 +305,8 @@ pk_backend_refresh_cache (PkBackend *backend, PkBackendJob *job, gboolean force)
         pk_backend_job_finished (job);
         return;
     }
+
+    backend_filename = eopkg_get_backend_filename ();
 
     pk_backend_spawn_helper (spawn, job, backend_filename, "refresh-cache", pk_backend_bool_to_string (force), NULL);
 }
@@ -309,14 +318,16 @@ pk_backend_remove_packages (PkBackend *backend, PkBackendJob *job,
                 gboolean allow_deps,
                 gboolean autoremove)
 {
-    char backend_filename[30];
+    const gchar *backend_filename = NULL;
     gchar *package_ids_temp;
     gchar *transaction_flags_temp;
 
-    eopkg_get_backend_filename(backend_filename);
     /* send the complete list as stdin */
     package_ids_temp = pk_package_ids_to_string (package_ids);
     transaction_flags_temp = pk_transaction_flag_bitfield_to_string (transaction_flags);
+
+    backend_filename = eopkg_get_backend_filename ();
+
     pk_backend_spawn_helper (spawn,
         job, backend_filename,
         "remove-packages",
@@ -333,8 +344,9 @@ pk_backend_remove_packages (PkBackend *backend, PkBackendJob *job,
 void
 pk_backend_repo_enable (PkBackend *backend, PkBackendJob *job, const gchar *rid, gboolean enabled)
 {
-    char backend_filename[30];
-    eopkg_get_backend_filename(backend_filename);
+    const gchar *backend_filename = NULL;
+
+    backend_filename = eopkg_get_backend_filename ();
 
     pk_backend_spawn_helper (spawn, job, backend_filename, "repo-enable", rid, pk_backend_bool_to_string (enabled), NULL);
 }
@@ -342,10 +354,10 @@ pk_backend_repo_enable (PkBackend *backend, PkBackendJob *job, const gchar *rid,
 void
 pk_backend_search_details (PkBackend *backend, PkBackendJob *job, PkBitfield filters, gchar **values)
 {
-    char backend_filename[30];
+    const gchar *backend_filename = NULL;
     gchar *filters_text;
     gchar *search;
-    eopkg_get_backend_filename(backend_filename);
+    backend_filename = eopkg_get_backend_filename ();
     filters_text = pk_filter_bitfield_to_string (filters);
     search = g_strjoinv ("&", values);
     pk_backend_spawn_helper (spawn, job, backend_filename, "search-details", filters_text, search, NULL);
@@ -356,10 +368,10 @@ pk_backend_search_details (PkBackend *backend, PkBackendJob *job, PkBitfield fil
 void
 pk_backend_search_files (PkBackend *backend, PkBackendJob *job, PkBitfield filters, gchar **values)
 {
-    char backend_filename[30];
+    const gchar *backend_filename = NULL;
     gchar *filters_text;
     gchar *search;
-    eopkg_get_backend_filename(backend_filename);
+    backend_filename = eopkg_get_backend_filename ();
     filters_text = pk_filter_bitfield_to_string (filters);
     search = g_strjoinv ("&", values);
     pk_backend_spawn_helper (spawn, job, backend_filename, "search-file", filters_text, search, NULL);
@@ -370,10 +382,10 @@ pk_backend_search_files (PkBackend *backend, PkBackendJob *job, PkBitfield filte
 void
 pk_backend_search_groups (PkBackend *backend, PkBackendJob *job, PkBitfield filters, gchar **values)
 {
-    char backend_filename[30];
+    const gchar *backend_filename = NULL;
     gchar *filters_text;
     gchar *search;
-    eopkg_get_backend_filename(backend_filename);
+    backend_filename = eopkg_get_backend_filename ();
     filters_text = pk_filter_bitfield_to_string (filters);
     search = g_strjoinv ("&", values);
     pk_backend_spawn_helper (spawn, job, backend_filename, "search-group", filters_text, search, NULL);
@@ -384,10 +396,10 @@ pk_backend_search_groups (PkBackend *backend, PkBackendJob *job, PkBitfield filt
 void
 pk_backend_search_names (PkBackend *backend, PkBackendJob *job, PkBitfield filters, gchar **values)
 {
-    char backend_filename[30];
+    const gchar *backend_filename = NULL;
     gchar *filters_text;
     gchar *search;
-    eopkg_get_backend_filename(backend_filename);
+    backend_filename = eopkg_get_backend_filename ();
     filters_text = pk_filter_bitfield_to_string (filters);
     search = g_strjoinv ("&", values);
     pk_backend_spawn_helper (spawn, job, backend_filename, "search-name", filters_text, search, NULL);
@@ -398,10 +410,9 @@ pk_backend_search_names (PkBackend *backend, PkBackendJob *job, PkBitfield filte
 void
 pk_backend_update_packages (PkBackend *backend, PkBackendJob *job, PkBitfield transaction_flags, gchar **package_ids)
 {
-    char backend_filename[30];
+    const gchar *backend_filename = NULL;
     gchar *package_ids_temp;
     gchar *transaction_flags_temp;
-    eopkg_get_backend_filename(backend_filename);
     /* Disable network check for now to allow for offline updates */
     /* TODO: Can we check transaction_flags or something here for that case? */
     /*if (!pk_backend_is_online (backend)) {
@@ -413,6 +424,7 @@ pk_backend_update_packages (PkBackend *backend, PkBackendJob *job, PkBitfield tr
     /* send the complete list as stdin */
     package_ids_temp = pk_package_ids_to_string (package_ids);
     transaction_flags_temp = pk_transaction_flag_bitfield_to_string (transaction_flags);
+    backend_filename = eopkg_get_backend_filename ();
 
     pk_backend_spawn_helper (spawn, job, backend_filename, "update-packages", transaction_flags_temp, package_ids_temp, NULL);
     g_free (package_ids_temp);
@@ -422,10 +434,10 @@ pk_backend_update_packages (PkBackend *backend, PkBackendJob *job, PkBitfield tr
 void
 pk_backend_get_packages (PkBackend *backend, PkBackendJob *job, PkBitfield filters)
 {
-    char backend_filename[30];
+    const gchar *backend_filename = NULL;
     gchar *filters_text;
 
-    eopkg_get_backend_filename(backend_filename);
+    backend_filename = eopkg_get_backend_filename ();
     filters_text = pk_filter_bitfield_to_string (filters);
     pk_backend_spawn_helper (spawn, job, backend_filename, "get-packages", filters_text, NULL);
     g_free (filters_text);
@@ -434,10 +446,10 @@ pk_backend_get_packages (PkBackend *backend, PkBackendJob *job, PkBitfield filte
 void
 pk_backend_resolve (PkBackend *backend, PkBackendJob *job, PkBitfield filters, gchar **package_ids)
 {
-    char backend_filename[30];
+    const gchar *backend_filename = NULL;
     gchar *filters_text;
     gchar *package_ids_temp;
-    eopkg_get_backend_filename(backend_filename);
+    backend_filename = eopkg_get_backend_filename ();
     filters_text = pk_filter_bitfield_to_string (filters);
     package_ids_temp = pk_package_ids_to_string (package_ids);
     pk_backend_spawn_helper (spawn, job, backend_filename, "resolve", filters_text, package_ids_temp, NULL);
@@ -448,9 +460,9 @@ pk_backend_resolve (PkBackend *backend, PkBackendJob *job, PkBitfield filters, g
 void
 pk_backend_get_repo_list (PkBackend *backend, PkBackendJob *job, PkBitfield filters)
 {
-    char backend_filename[30];
+    const gchar *backend_filename = NULL;
     gchar *filters_text;
-    eopkg_get_backend_filename(backend_filename);
+    backend_filename = eopkg_get_backend_filename ();
     filters_text = pk_filter_bitfield_to_string (filters);
     pk_backend_spawn_helper (spawn, job, backend_filename, "get-repo-list", filters_text, NULL);
     g_free (filters_text);
@@ -459,8 +471,9 @@ pk_backend_get_repo_list (PkBackend *backend, PkBackendJob *job, PkBitfield filt
 void
 pk_backend_repo_set_data (PkBackend *backend, PkBackendJob *job, const gchar *rid, const gchar *parameter, const gchar *value)
 {
-    char backend_filename[30];
-    eopkg_get_backend_filename(backend_filename);
+    const gchar *backend_filename = NULL;
+
+    backend_filename = eopkg_get_backend_filename ();
 
     pk_backend_spawn_helper (spawn, job, backend_filename, "repo-set-data", rid, parameter, value, NULL);
 }
