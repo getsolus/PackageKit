@@ -37,6 +37,7 @@
 import pisi
 import pisi.ui
 from packagekit.backend import *
+from packagekit.backend import _to_utf8
 from packagekit.package import PackagekitPackage
 from packagekit import enums
 import os.path
@@ -78,6 +79,14 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         self.options.yes_all = True
 
         self.saved_ui = pisi.context.ui
+
+    def get_db(self):
+        self.componentdb = pisi.db.componentdb.ComponentDB()
+        # self.filesdb = pisi.db.filesdb.FilesDB()
+        self.installdb = pisi.db.installdb.InstallDB()
+        self.packagedb = pisi.db.packagedb.PackageDB()
+        self.historydb = pisi.db.historydb.HistoryDB()
+        self.repodb = pisi.db.repodb.RepoDB()
 
     def _load_settings(self):
         """ Load the PK Group-> PiSi component mapping """
@@ -590,6 +599,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             self.error(ERROR_PACKAGE_ALREADY_INSTALLED, e)
 
         pisi.api.set_userinterface(self.saved_ui)
+        self.get_db()
         self.finished()
 
     def _report_all_for_package(self, package, remove=False):
@@ -690,6 +700,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             self.error(ERROR_UNKNOWN, e)
 
         pisi.api.set_userinterface(self.saved_ui)
+        self.get_db()
         self.finished()
 
     @privileged
@@ -709,6 +720,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             self.percentage(percentage)
 
         self.percentage(100)
+        self.get_db()
 
     @privileged
     def remove_packages(self, transaction_flags, package_ids,
@@ -766,6 +778,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             self.error(ERROR_CANNOT_REMOVE_SYSTEM_PACKAGE, e)
 
         pisi.api.set_userinterface(self.saved_ui)
+        self.get_db()
         self.finished()
 
     @privileged
@@ -778,6 +791,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             return
         else:
             self.error(ERROR_REPO_NOT_FOUND, "Repository %s was not found" % repoid)
+        self.get_db()
 
     @privileged
     def repo_set_data(self, repo_id, parameter, value):
@@ -804,6 +818,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 self.error(ERROR_REPO_NOT_FOUND, "Repository does not exist")
         else:
             self.error(ERROR_NOT_SUPPORTED, "Valid parameters are add-repo and remove-repo")
+        self.get_db()
 
     def resolve(self, filters, packages):
         """ Turns a single package name into a package_id
@@ -935,6 +950,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             self.error(ERROR_UNKNOWN, e)
 
         pisi.api.set_userinterface(self.saved_ui)
+        self.get_db()
         self.finished()
 
 def main():
