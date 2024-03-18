@@ -580,8 +580,10 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             if event == pisi.ui.installing:
                 self.status(STATUS_INSTALL)
                 pkg = keywords["package"]
-                # FIXME: we can't use self.packagedb here as it interferes with atomicoperations
-                repo = pisi.db.packagedb.PackageDB().which_repo(pkg.name)
+                if self.packagedb.has_package(pkg.name):
+                    repo = pisi.db.packagedb.PackageDB().which_repo(pkg.name)
+                else:
+                    repo = "local"
                 pkg_id = self.get_package_id(pkg.name, pkg.version, pkg.architecture, repo)
                 self.package(pkg_id, INFO_INSTALLING, pkg.summary)
 
