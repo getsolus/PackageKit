@@ -583,7 +583,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 # FIXME: we can't use self.packagedb here as it interferes with atomicoperations
                 repo = pisi.db.packagedb.PackageDB().which_repo(pkg.name)
                 pkg_id = self.get_package_id(pkg.name, pkg.version, pkg.architecture, repo)
-                self.package(package_id, INFO_INSTALLING, pkg.summary)
+                self.package(pkg_id, INFO_INSTALLING, pkg.summary)
 
         ui = SimplePisiHandler()
         pisi.api.set_userinterface(ui)
