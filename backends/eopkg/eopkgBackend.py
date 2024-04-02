@@ -604,31 +604,6 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         self.get_db()
         self.finished()
 
-    def _report_all_for_package(self, package, remove=False):
-        """ Report all deps for the given package """
-        if not remove:
-            deps = self.packagedb.get_package(package).runtimeDependencies()
-            # TODO: Add support to report conflicting packages requiring removal
-            #conflicts = self.packagedb.get_package (package).conflicts
-            for dep in deps:
-                if not self.installdb.has_package(dep.name()):
-                    dep_pkg = self.packagedb.get_package(dep.name())
-                    repo = self.packagedb.get_package_repo(dep_pkg.name, None)
-                    version = self.__get_package_version(dep_pkg)
-                    pkg_id = self.get_package_id(dep_pkg.name, version,
-                                                 dep_pkg.architecture, repo[1])
-                    self.package(pkg_id, INFO_INSTALLING, dep_pkg.summary)
-        else:
-            rev_deps = self.installdb.get_rev_deps(package)
-            for rev_dep, depinfo in rev_deps:
-                if self.installdb.has_package(rev_dep):
-                    dep_pkg = self.packagedb.get_package(rev_dep)
-                    repo = self.packagedb.get_package_repo(dep_pkg.name, None)
-                    version = self.__get_package_version(dep_pkg)
-                    pkg_id = self.get_package_id(dep_pkg.name, version,
-                                                 dep_pkg.architecture, repo[1])
-                    self.package(pkg_id, INFO_REMOVING, dep_pkg.summary)
-
     @privileged
     def install_packages(self, transaction_flags, package_ids):
         """ Installs given package into system"""
@@ -688,9 +663,18 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         ui.pisi_status = status_cb
         ui.the_callback = progress_cb
 
+        self.status(STATUS_DEP_RESOLVE)
+
         if TRANSACTION_FLAG_SIMULATE in transaction_flags:
-            for package in packages:
-                self._report_all_for_package(package)
+            pkgSet = set(packages)
+            order = pisi.api.get_install_order(pkgSet)
+            for dep in order:
+                dep_pkg = self.packagedb.get_package(dep)
+                repo = self.packagedb.get_package_repo(dep_pkg.name, None)
+                version = self.__get_package_version(dep_pkg)
+                pkg_id = self.get_package_id(dep_pkg.name, version,
+                                                dep_pkg.architecture, repo[1])
+                self.package(pkg_id, INFO_INSTALLING, dep_pkg.summary)
             return
 
         if TRANSACTION_FLAG_ONLY_DOWNLOAD in transaction_flags:
@@ -766,11 +750,20 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         ui.the_callback = progress_cb
         ui.pisi_status = status_cb
 
+        self.status(STATUS_DEP_RESOLVE)
+
         if TRANSACTION_FLAG_SIMULATE in transaction_flags:
-            # Simulated, not real.
-            for package in packages:
-                self._report_all_for_package(package, remove=True)
+            pkgSet = set(packages)
+            order = pisi.api.get_remove_order(pkgSet, autoremove)
+            for dep in order:
+                dep_pkg = self.packagedb.get_package(dep)
+                repo = self.packagedb.get_package_repo(dep_pkg.name, None)
+                version = self.__get_package_version(dep_pkg)
+                pkg_id = self.get_package_id(dep_pkg.name, version,
+                                             dep_pkg.architecture, repo[1])
+                self.package(pkg_id, INFO_REMOVING, dep_pkg.summary)
             return
+
         try:
             if autoremove:
                 pisi.api.autoremove(packages)
@@ -937,9 +930,18 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         ui.the_callback = progress_cb
         ui.pisi_status = status_cb
 
+        self.status(STATUS_DEP_RESOLVE)
+
         if TRANSACTION_FLAG_SIMULATE in transaction_flags:
-            for package in packages:
-                self._report_all_for_package(package)
+            pkgSet = set(packages)
+            order = pisi.api.get_upgrade_order(pkgSet)
+            for dep in order:
+                dep_pkg = self.packagedb.get_package(dep)
+                repo = self.packagedb.get_package_repo(dep_pkg.name, None)
+                version = self.__get_package_version(dep_pkg)
+                pkg_id = self.get_package_id(dep_pkg.name, version,
+                                                dep_pkg.architecture, repo[1])
+                self.package(pkg_id, INFO_INSTALLING, dep_pkg.summary)
             return
 
         if TRANSACTION_FLAG_ONLY_DOWNLOAD in transaction_flags:
