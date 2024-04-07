@@ -668,6 +668,9 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         if TRANSACTION_FLAG_SIMULATE in transaction_flags:
             pkgSet = set(packages)
             order = pisi.api.get_install_order(pkgSet)
+            # Merge any forced system.base upgrades to the order as well
+            base_order = pisi.api.get_base_upgrade_order(pkgSet)
+            order = base_order + order
             for dep in order:
                 dep_pkg = self.packagedb.get_package(dep)
                 repo = self.packagedb.get_package_repo(dep_pkg.name, None)
@@ -935,6 +938,9 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         if TRANSACTION_FLAG_SIMULATE in transaction_flags:
             pkgSet = set(packages)
             order = pisi.api.get_upgrade_order(pkgSet)
+            # Merge any forced system.base upgrades to the order as well
+            base_order = pisi.api.get_base_upgrade_order(pkgSet)
+            order = base_order + order
             for dep in order:
                 dep_pkg = self.packagedb.get_package(dep)
                 repo = self.packagedb.get_package_repo(dep_pkg.name, None)
