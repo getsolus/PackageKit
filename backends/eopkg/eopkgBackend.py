@@ -148,7 +148,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
 
         # Not found
         if installed is None and available is None:
-            self.error(ERROR_PACKAGE_NOT_FOUND, "Package %s was not found" % package)
+            raise PkError(ERROR_PACKAGE_NOT_FOUND, "Package %s not found" % package)
 
         # Unholy matrimony of irish priests who got a deal with the catholic church
         fltred = None
@@ -832,8 +832,11 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 if filters is not None and FILTER_NEWEST in filters:
                     self.__get_package(pkg, FILTER_NOT_INSTALLED)
                 self.__get_package(pkg, filters)
-            except Exception:
-                self.error(ERROR_PACKAGE_NOT_FOUND, "Package %s not found" % package)
+            except PkError as e:
+                if e.code == ERROR_PACKAGE_NOT_FOUND:
+                    continue
+                self.error(e.code, e.details, exit=True)
+                return
 
     def search_details(self, filters, values):
         """ Prints a detailed list of packages contains search term """
