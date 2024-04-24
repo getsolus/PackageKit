@@ -37,25 +37,135 @@
 import pisi
 import pisi.ui
 from packagekit.backend import *
-from packagekit.backend import _to_utf8
+from packagekit.enums import *
+from packagekit.progress import *
 from packagekit.package import PackagekitPackage
-from packagekit import enums
 import os.path
 from collections import Counter
 from operator import attrgetter
 import re
 
+TransactionsStateMap = {
+    "download_packages" : STATUS_DOWNLOAD,
+    "update_packages"   : STATUS_UPDATE,
+    "remove_packages"   : STATUS_REMOVE,
+    "install_packages"  : STATUS_INSTALL,
+    "install_files"     : STATUS_INSTALL,
+    "refresh_cache"     : STATUS_REFRESH_CACHE
+}
+
+TransactionsInfoMap = {
+    "update_packages"   : INFO_UPDATING,
+    "remove_packages"   : INFO_REMOVING,
+    "install_packages"  : INFO_INSTALLING,
+    "install_files"     : INFO_INSTALLING
+}
+
 # Override PiSi UI so we can get callbacks for progress and events
 class SimplePisiHandler(pisi.ui.UI):
 
-    def __init(self):
+    # FIXME: After a successful operation pk will emit automatically `finished'  finished: invalid command 'iled to parse:`
+    #        Where does the extra ' in `finished'` come from causing the parsing to fail? We need to emit self.finished()
+    #        in our @privileged decorator manually to workaround it.
+    # FIXME: Anything that uses the @locked decoration in pisi.api that invalidates the DBs causes us to get a unref error
+    #        with GSimpleAsyncResult or a segfault with GTask. We currently revert b068646d2fbb246c590a47531688c69df2699fa6
+    #        to use GSimpleAsyncResult instead of GTask to avoid the segfault for now as a workaround.
+    def __init__(self, base):
         pisi.ui.UI.__init__(self, False, False)
+        self.errors = 0
+        self.warnings = 0
 
-    def display_progress(self, **ka):
-        self.the_callback(**ka)
+        # PackageKitPisiBackend
+        self.base = base
+
+        # Progress bar helpers
+        self.packagestogo = 0
+        self.currentpackage = 0
+
+    @staticmethod
+    def get_percentage(count, max_count):
+        """
+        Prepare percentage value used to feed self.percentage()
+        """
+        if count == 0 or max_count == 0:
+            return 0
+        percent = int((float(count) / max_count) * 100)
+        if percent > 100:
+            return 100
+        return percent
+
+    def update_percentage(self, downloading=False):
+        # Reset counter when switching state i.e. from downloading to installing
+        # FIXME: If we get forced upgrades i.e. partial upgrades as part of a pkg
+        #        installation, it breaks the progress bar as we switch from INFO_INSTALLING
+        #        to INFO_UPDATING and doesn't match up with packagestogo.
+        if self.currentpackage == self.packagestogo:
+            self.currentpackage = 0
+        self.currentpackage += 1
+        percent = self.get_percentage(self.currentpackage, self.packagestogo)
+        if downloading is False:
+            # Reserve 10% of progress to account for usysconf to run triggers
+            usysconf_offset = 0.1 * self.packagestogo
+            total_percent = percent + usysconf_offset
+            self.base._set_percent(total_percent)
+        else:
+            self.base._set_percent(percent)
+
+    def display_progress(self, **kw):
+        percent = self.get_percentage(self.currentpackage, self.packagestogo)
+        file_name = kw["filename"]
+        if not file_name.startswith("eopkg-index.xml"):
+            pkg_name = pisi.util.parse_package_name(file_name)[0]
+            self.notify("progress", pkg_name=pkg_name, percent=int(kw['percent']))
+        if self.packagestogo > 0:
+            # Increase the step offset by 50%
+            # e.g. 5 pkgs to install, currentpackage == 3 so update percentage range within 60% to 80%.
+            sliced = (100 / self.packagestogo)
+            slicedpercent = sliced / 100 * int(kw['percent']) + percent - sliced
+            self.base._set_percent(slicedpercent)
+        else:
+            self.base._set_percent(int(kw['percent']))
 
     def notify(self, event, **keywords):
-        self.pisi_status(event, **keywords)
+
+        if event == pisi.ui.packagestogo:
+            self.packagestogo = len(keywords["order"])
+        if event == pisi.ui.downloading:
+            self.base._set_status(keywords["package"], INFO_DOWNLOADING)
+            self.update_percentage(downloading=True)
+        if event == "progress":
+            if pisi.db.packagedb.PackageDB().has_package(keywords["pkg_name"]):
+                pkg = pisi.db.packagedb.PackageDB().get_package(keywords["pkg_name"])
+                self.base.item_progress(self.base._pkg_to_id(pkg), STATUS_DOWNLOAD, keywords['percent'])
+        #if event == pisi.ui.cached:
+        #   self.base._set_status(keywords["package"], INFO_FINISHED)
+        if event == pisi.ui.installing:
+            # Pisi doesn't tell us whether it's installing or upgrading in the callback until after it's done it, thanks!
+            # This is bad for progress bars, obviously. Set the status based on the called operation.
+            self.base.status(TransactionsStateMap[self.base.operation])
+
+            self.base._set_status(keywords["package"], TransactionsInfoMap[self.base.operation])
+            self.base.item_progress(self.base._pkg_to_id(keywords["package"]), TransactionsStateMap[self.base.operation], 0)
+        if event == pisi.ui.removing:
+            self.base._set_status(keywords["package"], TransactionsInfoMap[self.base.operation])
+            self.base.item_progress(self.base._pkg_to_id(keywords["package"]), TransactionsStateMap[self.base.operation], 0)
+        if event == pisi.ui.extracting:
+            # Increase the step offset by 50% and account for usysconf offset
+            # e.g. 5 pkgs to install, currentpackage == 3 so update percentage 50% within 60% to 80%.
+            subpercentage = (100 / (self.packagestogo + (0.1 * self.packagestogo))) / 100 * 50 + self.get_percentage(self.currentpackage, self.packagestogo)
+            self.base._set_percent(subpercentage)
+            self.base.item_progress(self.base._pkg_to_id(keywords["package"]), TransactionsStateMap[self.base.operation], 50)
+        if event == pisi.ui.installed:
+            self.base.item_progress(self.base._pkg_to_id(keywords["package"]), STATUS_INSTALL, 100)
+            self.update_percentage()
+        if event == pisi.ui.removed:
+            self.base.item_progress(self.base._pkg_to_id(keywords["package"]), STATUS_REMOVE, 100)
+            self.update_percentage()
+        if event == pisi.ui.upgraded:
+            self.base.item_progress(self.base._pkg_to_id(keywords["package"]), STATUS_UPDATE, 100)
+            self.update_percentage()
+        if event == pisi.ui.systemconf:
+            self.base._set_percent(90)
 
 class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
 
@@ -65,14 +175,10 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         self.bug_regex = None
         self.bug_uri = None
         self._load_settings()
+        self.operation = None
         PackageKitBaseBackend.__init__(self, args)
 
-        self.componentdb = pisi.db.componentdb.ComponentDB()
-        # self.filesdb = pisi.db.filesdb.FilesDB()
-        self.installdb = pisi.db.installdb.InstallDB()
-        self.packagedb = pisi.db.packagedb.PackageDB()
-        self.historydb = pisi.db.historydb.HistoryDB()
-        self.repodb = pisi.db.repodb.RepoDB()
+        self.get_db()
 
         # Do not ask any question to users
         self.options = pisi.config.Options()
@@ -113,62 +219,50 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         else:
             self.groups = {}
 
-    def progress_cb(self, **kw):
-        # we continue to get callbacks at 100%
-        # hijacking the progress bar so cap to 99.
-        if int(kw['percent']) < 99:
-            self.percentage(int(kw['percent']))
-
-    def status_cb(self, event, **keywords):
-        # FIXME: when getting repo, we can't use self.packagedb here as it interferes with atomicoperations
-        if event == pisi.ui.downloading:
-            self.status(STATUS_DOWNLOAD)
-            pkg = keywords["package"]
-            if self.packagedb.has_package(pkg.name):
-                repo = pisi.db.packagedb.PackageDB().which_repo(pkg.name)
-            else:
-                repo = "local"
-            pkg_id = self.get_package_id(pkg.name, pkg.version, pkg.architecture, repo)
-            self.package(pkg_id, INFO_DOWNLOADING, pkg.summary)
-        if event == pisi.ui.installing:
-            self.status(STATUS_INSTALL)
-            pkg = keywords["package"]
-            if self.packagedb.has_package(pkg.name):
-                repo = pisi.db.packagedb.PackageDB().which_repo(pkg.name)
-            else:
-                repo = "local"
-            pkg_id = self.get_package_id(pkg.name, pkg.version, pkg.architecture, repo)
-            self.package(pkg_id, INFO_INSTALLING, pkg.summary)
-        if event == pisi.ui.removing:
-            self.status(STATUS_REMOVE)
-            pkg = keywords["package"]
-            if self.packagedb.has_package(pkg.name):
-                repo = pisi.db.packagedb.PackageDB().which_repo(pkg.name)
-            else:
-                repo = "installed"
-            pkg_id = self.get_package_id(pkg.name, pkg.version, pkg.architecture, repo)
-            self.package(pkg_id, INFO_REMOVING, pkg.summary)
+    def _set_percent(self, percent):
+        if percent <= 100:
+            self.percentage(percent)
 
     def privileged(func):
         """
         Decorator for synchronizing privileged functions
         """
         def wrapper(self, *__args,**__kw):
-            ui = SimplePisiHandler()
+            ui = SimplePisiHandler(self)
+            self.operation = func.__name__
             pisi.api.set_userinterface(ui)
-            ui.the_callback = self.progress_cb
-            ui.pisi_status = self.status_cb
             try:
                 func(self, *__args,**__kw)
-            except KeyboardInterrupt:
-                return
             except Exception as e:
                 raise(e)
-                return
-            pisi.api.set_userinterface(self.saved_ui)
-            self.get_db()
+            # FIXME: Have to emit twice because some garbage gets thrown in
+            #        ` Pappercentage'  100: invalid command '`
+            self.percentage(100)
+            self.percentage(100)
             self.finished()
+            self.get_db()
+            pisi.api.set_userinterface(self.saved_ui)
         return wrapper
+
+    def _pkg_to_id(self, pkg):
+        ''' PiSi pkg to pk id '''
+        # FIXME: when getting repo, we can't use self.packagedb/installdb here
+        # as they get invalidated by the pisi.api call.
+        if pisi.db.packagedb.PackageDB().has_package(pkg.name):
+            repo = pisi.db.packagedb.PackageDB().which_repo(pkg.name)
+            #if pisi.db.installdb.InstallDB().has_package(pkg.name):
+            #    repo = "installed:{}".format(repo)
+        else:
+            if pisi.db.installdb.InstallDB().has_package(pkg.name):
+                repo = "installed"
+            else:
+                repo = "local"
+        pkg_id = self.get_package_id(pkg.name, pkg.version, pkg.architecture, repo)
+        return pkg_id
+
+    def _set_status(self, pkg, status):
+        package_id = self._pkg_to_id(pkg)
+        self.package(package_id, status, pkg.summary)
 
     def __get_package_version(self, package):
         """ Returns version string of given package """
@@ -617,10 +711,8 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
     @privileged
     def install_packages(self, transaction_flags, package_ids):
         """ Installs given package into system"""
-
-        # FIXME: better fetch/install progress e.g. divide by len of packages
-        self.percentage(None)
-
+        self.allow_cancel(False)
+        self.percentage(0)
         packages = list()
 
         # FIXME: use only_trusted
@@ -630,8 +722,6 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 self.error(ERROR_PACKAGE_NOT_INSTALLED,
                            "Package is already installed")
             packages.append(package)
-
-        self.status(STATUS_DEP_RESOLVE)
 
         if TRANSACTION_FLAG_SIMULATE in transaction_flags:
             pkgSet = set(packages)
@@ -676,10 +766,8 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
     def remove_packages(self, transaction_flags, package_ids,
                         allowdeps, autoremove):
         """ Removes given package from system"""
-        # FIXME: better remove progress e.g. get len of pkgs, get len of files per pkg
-        # get callback for extra autoremove deps
         self.allow_cancel(False)
-        self.percentage(None)
+        self.percentage(0)
         packages = list()
 
         for package_id in package_ids:
@@ -837,8 +925,6 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                            "Cannot update a package that is not installed")
             packages.append(package)
 
-        self.status(STATUS_DEP_RESOLVE)
-
         if TRANSACTION_FLAG_SIMULATE in transaction_flags:
             pkgSet = set(packages)
             order = pisi.api.get_upgrade_order(pkgSet)
@@ -851,7 +937,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 version = self.__get_package_version(dep_pkg)
                 pkg_id = self.get_package_id(dep_pkg.name, version,
                                                 dep_pkg.architecture, repo[1])
-                self.package(pkg_id, INFO_INSTALLING, dep_pkg.summary)
+                self.package(pkg_id, INFO_UPDATING, dep_pkg.summary)
             return
 
         if TRANSACTION_FLAG_ONLY_DOWNLOAD in transaction_flags:
