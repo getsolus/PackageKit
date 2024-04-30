@@ -25,10 +25,10 @@
 
 static PkBackendSpawn *spawn;
 
-static const gchar *eopkg_get_backend_filename ();
+static const gchar *eopkg_get_backend_filename (void);
 
 static const gchar
-*eopkg_get_backend_filename ()
+*eopkg_get_backend_filename (void)
 {
     if (g_file_test ("/usr/share/PackageKit/helpers/eopkg/eopkgBackend.bin", G_FILE_TEST_EXISTS)) {
         return "eopkgBackend.bin";
@@ -63,12 +63,6 @@ void
 pk_backend_initialize (GKeyFile *conf, PkBackend *backend)
 {
     g_debug ("backend: initialize");
-
-    /* BACKEND MAINTAINER: feel free to remove this when you've
-     * added support for ONLY_DOWNLOAD and merged the simulate
-     * methods as specified in backends/PORTING.txt */
-    /*g_error ("Backend needs to be ported to 0.8.x -- "
-         "see backends/PORTING.txt for details"); */
 
     spawn = pk_backend_spawn_new (conf);
     pk_backend_spawn_set_name (spawn, "eopkg");
