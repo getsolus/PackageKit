@@ -61,6 +61,16 @@ TransactionsInfoMap = {
     "install_files"     : INFO_INSTALLING
 }
 
+def _format_str(text):
+    """
+    Convert a multi line string to a list separated by ';'
+    """
+    if text:
+        lines = text.split('\n')
+        return ";".join(lines)
+    else:
+        return ""
+
 # Override PiSi UI so we can get callbacks for progress and events
 class SimplePisiHandler(pisi.ui.UI):
 
@@ -688,9 +698,14 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 uri = package_obj.packageURI.split("/")[-1]
                 location = os.path.join(directory, uri)
                 self.files(package_id, location)
+        except pisi.fetcher.FetchError as e:
+            self.error(ERROR_PACKAGE_DOWNLOAD_FAILED, "Could not download package: %s" % e, exit=False)
+        except exceptions.IOError as e:
+            self.error(ERROR_NO_SPACE_ON_DEVICE, "Disk error: %s" % e)
+        except pisi.Error as e:
+            self.error(ERROR_PACKAGE_DOWNLOAD_FAILED, "Could not download package: %s" % e, exit=False)
         except Exception as e:
-            self.error(ERROR_PACKAGE_DOWNLOAD_FAILED,
-                       "Could not download package: %s" % e)
+            self.error(ERROR_INTERNAL_ERROR, _format_str(traceback.format_exc()))
 
     @privileged
     def install_files(self, only_trusted, files):
@@ -703,10 +718,14 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         try:
             # Actually install
             pisi.api.install(files)
+        except pisi.fetcher.FetchError as e:
+            self.error(ERROR_PACKAGE_DOWNLOAD_FAILED, "Could not download package: %s" % e, exit=False)
+        except exceptions.IOError as e:
+            self.error(ERROR_NO_SPACE_ON_DEVICE, "Disk error: %s" % e)
         except pisi.Error as e:
-            # FIXME: Error: internal-error : Package re-install declined
-            # Force needed?
-            self.error(ERROR_PACKAGE_ALREADY_INSTALLED, e)
+            self.error(ERROR_LOCAL_INSTALL_FAILED, "Could not install: %s" % e, exit=False)
+        except Exception as e:
+            self.error(ERROR_INTERNAL_ERROR, _format_str(traceback.format_exc()))
 
     @privileged
     def install_packages(self, transaction_flags, package_ids):
@@ -743,8 +762,14 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
 
         try:
             pisi.api.install(packages)
+        except pisi.fetcher.FetchError as e:
+            self.error(ERROR_PACKAGE_DOWNLOAD_FAILED, "Could not download package: %s" % e, exit=False)
+        except exceptions.IOError as e:
+            self.error(ERROR_NO_SPACE_ON_DEVICE, "Disk error: %s" % e)
         except pisi.Error as e:
-            self.error(ERROR_UNKNOWN, e)
+            self.error(ERROR_PACKAGE_FAILED_TO_INSTALL, "Could not install: %s" % e, exit=False)
+        except Exception as e:
+            self.error(ERROR_INTERNAL_ERROR, _format_str(traceback.format_exc()))
 
     @privileged
     def refresh_cache(self, force):
@@ -794,8 +819,14 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 pisi.api.autoremove(packages)
             else:
                 pisi.api.remove(packages)
+        except pisi.fetcher.FetchError as e:
+            self.error(ERROR_PACKAGE_DOWNLOAD_FAILED, "Could not download package: %s" % e, exit=False)
+        except exceptions.IOError as e:
+            self.error(ERROR_NO_SPACE_ON_DEVICE, "Disk error: %s" % e)
         except pisi.Error as e:
-            self.error(ERROR_CANNOT_REMOVE_SYSTEM_PACKAGE, e)
+            self.error(ERROR_PACKAGE_FAILED_TO_REMOVE, "Could not remove: %s" % e, exit=False)
+        except Exception as e:
+            self.error(ERROR_INTERNAL_ERROR, _format_str(traceback.format_exc()))
 
     @privileged
     def repo_enable(self, repoid, enable):
@@ -946,8 +977,14 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         try:
             # Actually upgrade
             pisi.api.upgrade(packages)
+        except pisi.fetcher.FetchError as e:
+            self.error(ERROR_PACKAGE_DOWNLOAD_FAILED, "Could not download package: %s" % e, exit=False)
+        except exceptions.IOError as e:
+            self.error(ERROR_NO_SPACE_ON_DEVICE, "Disk error: %s" % e)
+        except pisi.Error as e:
+            self.error(ERROR_PACKAGE_FAILED_TO_UPDATE, "Could not update: %s" % e, exit=False)
         except Exception as e:
-            self.error(ERROR_UNKNOWN, e)
+            self.error(ERROR_INTERNAL_ERROR, _format_str(traceback.format_exc()))
 
 def main():
     backend = PackageKitPisiBackend('')
