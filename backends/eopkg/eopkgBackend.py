@@ -708,13 +708,27 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             self.error(ERROR_INTERNAL_ERROR, _format_str(traceback.format_exc()))
 
     @privileged
-    def install_files(self, only_trusted, files):
+    def install_files(self, transaction_flags, files):
         """ Installs given package into system"""
 
         # FIXME: use only_trusted
-        # FIXME: install progress
-        self.allow_cancel(False)
 
+        if TRANSACTION_FLAG_SIMULATE in transaction_flags:
+            for f in files:
+                metadata, _ = pisi.api.info_file(f)
+                pkg_id = self.get_package_id(metadata.package.name, metadata.package.version, metadata.package.architecture, "local")
+                self.package(pkg_id, INFO_INSTALLING, metadata.package.summary)
+                for dep in metadata.package.runtimeDependencies():
+                    if not dep.satisfied_by_installed():
+                        if not self.packagedb.has_package(dep.package):
+                            self.error(ERROR_DEP_RESOLUTION_FAILED, "Cannot install: %s. Can't resolve dependency %s" % (f, dep.package))
+                        dep_pkg = self.packagedb.get_package(dep.package)
+                        repo = self.packagedb.get_package_repo(dep_pkg.name, None)
+                        dep_id = self.get_package_id(dep_pkg.name, dep_pkg.version, dep_pkg.architecture, repo)
+                        self.package(dep_id, INFO_INSTALLING, dep_pkg.summary)
+            return
+
+        self.allow_cancel(False)
         try:
             # Actually install
             pisi.api.install(files)
