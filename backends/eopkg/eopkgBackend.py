@@ -807,6 +807,8 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             order = pisi.api.get_remove_order(pkgSet, autoremove)
             for dep in order:
                 dep_pkg = self.packagedb.get_package(dep)
+                if dep_pkg.partOf == "system.base":
+                    self.error(ERROR_CANNOT_REMOVE_SYSTEM_PACKAGE, "Cannot remove system.base package: %s" % dep_pkg.name)
                 repo = self.packagedb.get_package_repo(dep_pkg.name, None)
                 version = self.__get_package_version(dep_pkg)
                 pkg_id = self.get_package_id(dep_pkg.name, version,
