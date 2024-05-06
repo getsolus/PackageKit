@@ -38,17 +38,6 @@ static const gchar
 }
 
 void
-pk_backend_repair_system (PkBackend *backend, PkBackendJob *job, PkBitfield transaction_flags)
-{
-    const gchar *backend_filename = NULL;
-
-    backend_filename = eopkg_get_backend_filename ();
-
-    pk_backend_spawn_helper (spawn, job, backend_filename, "repair_system", NULL);
-    pk_backend_job_finished (job);
-}
-
-void
 pk_backend_start_job (PkBackend *backend, PkBackendJob *job)
 {
     if (pk_backend_spawn_is_busy (spawn)) {
@@ -470,6 +459,19 @@ pk_backend_repo_set_data (PkBackend *backend, PkBackendJob *job, const gchar *ri
     backend_filename = eopkg_get_backend_filename ();
 
     pk_backend_spawn_helper (spawn, job, backend_filename, "repo-set-data", rid, parameter, value, NULL);
+}
+
+void
+pk_backend_repair_system (PkBackend *backend, PkBackendJob *job, PkBitfield transaction_flags)
+{
+    const gchar *backend_filename = NULL;
+    gchar *transaction_flags_temp;
+
+    backend_filename = eopkg_get_backend_filename ();
+    transaction_flags_temp = pk_transaction_flag_bitfield_to_string (transaction_flags);
+
+    pk_backend_spawn_helper (spawn, job, backend_filename, "repair-system", transaction_flags_temp, NULL);
+    g_free (transaction_flags_temp);
 }
 
 gboolean
