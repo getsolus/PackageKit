@@ -410,12 +410,16 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             self.category(component.group, cat_id, component.name, str(component.summary), "image-missing")
 
     def repair_system(self, transaction_flags):
-        '''
-        Implement the {backend}-repair-system functionality
-        Needed to be implemented in a sub class
-        '''
-        self.error(ERROR_NOT_SUPPORTED, "This function is not implemented in this backend",
-                   exit=False)
+        """ Deletes caches, rebuilds filesdb and reinits pisi caches """
+
+        if TRANSACTION_FLAG_SIMULATE in transaction_flags:
+            return
+
+        self.status(STATUS_CLEANUP)
+        pisi.api.delete_cache()
+        self.status(STATUS_REFRESH_CACHE)
+        pisi.api.rebuild_db(files=True)
+        pisi.db.update_caches()
 
     def get_details(self, package_ids):
         """ Prints a detailed description for a given packages """
