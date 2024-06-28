@@ -704,7 +704,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 self.files(package_id, location)
         except pisi.fetcher.FetchError as e:
             self.error(ERROR_PACKAGE_DOWNLOAD_FAILED, "Could not download package: %s" % e, exit=False)
-        except exceptions.IOError as e:
+        except Exception.IOError as e:
             self.error(ERROR_NO_SPACE_ON_DEVICE, "Disk error: %s" % e)
         except pisi.Error as e:
             self.error(ERROR_PACKAGE_DOWNLOAD_FAILED, "Could not download package: %s" % e, exit=False)
@@ -738,7 +738,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             pisi.api.install(files)
         except pisi.fetcher.FetchError as e:
             self.error(ERROR_PACKAGE_DOWNLOAD_FAILED, "Could not download package: %s" % e, exit=False)
-        except exceptions.IOError as e:
+        except Exception.IOError as e:
             self.error(ERROR_NO_SPACE_ON_DEVICE, "Disk error: %s" % e)
         except pisi.Error as e:
             self.error(ERROR_LOCAL_INSTALL_FAILED, "Could not install: %s" % e, exit=False)
@@ -782,7 +782,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             pisi.api.install(packages)
         except pisi.fetcher.FetchError as e:
             self.error(ERROR_PACKAGE_DOWNLOAD_FAILED, "Could not download package: %s" % e, exit=False)
-        except exceptions.IOError as e:
+        except Exception.IOError as e:
             self.error(ERROR_NO_SPACE_ON_DEVICE, "Disk error: %s" % e)
         except pisi.Error as e:
             self.error(ERROR_PACKAGE_FAILED_TO_INSTALL, "Could not install: %s" % e, exit=False)
@@ -841,7 +841,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 pisi.api.remove(packages)
         except pisi.fetcher.FetchError as e:
             self.error(ERROR_PACKAGE_DOWNLOAD_FAILED, "Could not download package: %s" % e, exit=False)
-        except exceptions.IOError as e:
+        except Exception.IOError as e:
             self.error(ERROR_NO_SPACE_ON_DEVICE, "Disk error: %s" % e)
         except pisi.Error as e:
             self.error(ERROR_PACKAGE_FAILED_TO_REMOVE, "Could not remove: %s" % e, exit=False)
@@ -999,7 +999,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             pisi.api.upgrade(packages)
         except pisi.fetcher.FetchError as e:
             self.error(ERROR_PACKAGE_DOWNLOAD_FAILED, "Could not download package: %s" % e, exit=False)
-        except exceptions.IOError as e:
+        except Exception.IOError as e:
             self.error(ERROR_NO_SPACE_ON_DEVICE, "Disk error: %s" % e)
         except pisi.Error as e:
             self.error(ERROR_PACKAGE_FAILED_TO_UPDATE, "Could not update: %s" % e, exit=False)
