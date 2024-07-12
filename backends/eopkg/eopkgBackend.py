@@ -432,16 +432,14 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
 
             pkg = ""
             size = 0
+            dl_size = 0
             data = "installed"
 
             # FIXME: There is duplication here from __get_package
             if self.packagedb.has_package(package):
                 pkg, repo = self.packagedb.get_package_repo(package, None)
-                if self.installdb.has_package(package):
-                    local_pkg = self.installdb.get_package(package)
-                    size = int(local_pkg.installedSize)
-                else:
-                    size = int(pkg.packageSize)
+                size = int(pkg.installedSize)
+                dl_size = int(pkg.packageSize)
                 if self.installdb.has_package(package):
                     data = "installed:{}".format(repo)
                 else:
@@ -450,6 +448,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 pkg = self.installdb.get_package(package)
                 data = "local"
                 size = int(pkg.installedSize)
+                dl_size = int(pkg.packageSize)
             else:
                 self.error(ERROR_PACKAGE_NOT_FOUND, "Package %s was not found" % package)
 
@@ -467,7 +466,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             description = str(pkg.description).replace('\n', " ")
 
             self.details(pkg_id, pkg.summary, ",".join(pkg.license), group, description,
-                            homepage, size)
+                            homepage, size, dl_size)
 
     def get_details_local(self, files):
 
@@ -502,9 +501,10 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 else ''
 
             size = pkg.installedSize
+            dl_size = pkg.packageSize
 
             self.details(pkg_id, pkg.summary, ",".join(pkg.license), group, pkg.description,
-                            homepage, size)
+                            homepage, size, dl_size)
 
     def get_files(self, package_ids):
         """ Prints a file list for a given packages """
