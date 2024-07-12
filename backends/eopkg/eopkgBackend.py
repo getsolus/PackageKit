@@ -1002,7 +1002,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         except IOError as e:
             self.error(ERROR_NO_SPACE_ON_DEVICE, "Disk error: %s" % e)
         except pisi.Error as e:
-            self.error(ERROR_PACKAGE_FAILED_TO_UPDATE, "Could not update: %s" % e, exit=False)
+            self.error(ERROR_PACKAGE_FAILED_TO_INSTALL, "Could not update: %s" % e, exit=False)
         except Exception as e:
             self.error(ERROR_INTERNAL_ERROR, _format_str(traceback.format_exc()))
 
