@@ -721,7 +721,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             for f in files:
                 metadata, _ = pisi.api.info_file(f)
                 pkg_id = self.get_package_id(metadata.package.name, metadata.package.version, metadata.package.architecture, "local")
-                self.package(pkg_id, INFO_INSTALLING, metadata.package.summary)
+                self.package(pkg_id, INFO_INSTALL, metadata.package.summary)
                 for dep in metadata.package.runtimeDependencies():
                     if not dep.satisfied_by_installed():
                         if not self.packagedb.has_package(dep.package):
@@ -729,7 +729,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                         dep_pkg = self.packagedb.get_package(dep.package)
                         repo = self.packagedb.get_package_repo(dep_pkg.name, None)
                         dep_id = self.get_package_id(dep_pkg.name, dep_pkg.version, dep_pkg.architecture, repo)
-                        self.package(dep_id, INFO_INSTALLING, dep_pkg.summary)
+                        self.package(dep_id, INFO_INSTALL, dep_pkg.summary)
             return
 
         self.allow_cancel(False)
@@ -772,7 +772,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 version = self.__get_package_version(dep_pkg)
                 pkg_id = self.get_package_id(dep_pkg.name, version,
                                                 dep_pkg.architecture, repo[1])
-                self.package(pkg_id, INFO_INSTALLING, dep_pkg.summary)
+                self.package(pkg_id, INFO_INSTALL, dep_pkg.summary)
             return
 
         if TRANSACTION_FLAG_ONLY_DOWNLOAD in transaction_flags:
@@ -831,7 +831,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 version = self.__get_package_version(dep_pkg)
                 pkg_id = self.get_package_id(dep_pkg.name, version,
                                              dep_pkg.architecture, repo[1])
-                self.package(pkg_id, INFO_REMOVING, dep_pkg.summary)
+                self.package(pkg_id, INFO_REMOVE, dep_pkg.summary)
             return
 
         try:
@@ -988,7 +988,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 version = self.__get_package_version(dep_pkg)
                 pkg_id = self.get_package_id(dep_pkg.name, version,
                                                 dep_pkg.architecture, repo[1])
-                self.package(pkg_id, INFO_UPDATING, dep_pkg.summary)
+                self.package(pkg_id, INFO_INSTALL, dep_pkg.summary)
             return
 
         if TRANSACTION_FLAG_ONLY_DOWNLOAD in transaction_flags:
