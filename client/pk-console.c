@@ -449,6 +449,7 @@ pk_console_details_cb (PkDetails *item, gpointer data)
 {
 	PkGroupEnum group;
 	guint64 size;
+	guint64 download_size;
 	g_autofree gchar *description = NULL;
 	g_autofree gchar *license = NULL;
 	g_autofree gchar *package_id = NULL;
@@ -465,6 +466,7 @@ pk_console_details_cb (PkDetails *item, gpointer data)
 		      "summary", &summary,
 		      "group", &group,
 		      "size", &size,
+		      "download_size", &download_size,
 		      NULL);
 
 	/* create printable */
@@ -472,13 +474,14 @@ pk_console_details_cb (PkDetails *item, gpointer data)
 
 	/* TRANSLATORS: This a list of details about the package */
 	g_print ("%s\n", _("Package description"));
-	g_print ("  package:     %s\n", package);
-	g_print ("  summary:     %s\n", summary);
-	g_print ("  license:     %s\n", license);
-	g_print ("  group:       %s\n", pk_group_enum_to_string (group));
-	g_print ("  description: %s\n", description);
-	g_print ("  size:        %lu bytes\n", (long unsigned int) size);
-	g_print ("  url:         %s\n", url);
+	g_print ("  package:       %s\n", package);
+	g_print ("  summary:       %s\n", summary);
+	g_print ("  license:       %s\n", license);
+	g_print ("  group:         %s\n", pk_group_enum_to_string (group));
+	g_print ("  description:   %s\n", description);
+	g_print ("  size:          %lu bytes\n", (long unsigned int) size);
+	g_print ("  download_size: %lu bytes\n", (long unsigned int) download_size);
+	g_print ("  url:           %s\n", url);
 }
 
 static void
@@ -2446,4 +2449,3 @@ out_last:
 	g_option_context_free (context);
 	return retval_copy;
 }
-
