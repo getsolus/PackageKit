@@ -501,10 +501,9 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
                 else ''
 
             size = pkg.installedSize
-            dl_size = pkg.packageSize
 
             self.details(pkg_id, pkg.summary, ",".join(pkg.license), group, pkg.description,
-                            homepage, size, dl_size)
+                            homepage, size, 0)
 
     def get_files(self, package_ids):
         """ Prints a file list for a given packages """
