@@ -35,7 +35,15 @@
 # comment.
 
 import pisi
+from pisi import metadata
+import pisi.api
+import pisi.config
+import pisi.context
+import pisi.db
+import pisi.fetcher
+from pisi.package import Package
 import pisi.ui
+import pisi.util
 from packagekit.backend import *
 from packagekit.enums import *
 from packagekit.progress import *
@@ -589,7 +597,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             else:
                 self.error(ERROR_PACKAGE_NOT_FOUND, "Package %s was not found" % package.name)
 
-    def get_updates(self, filter):
+    def get_updates(self, filters):
         """ Prints available updates and types """
         self.allow_cancel(True)
         self.percentage(None)
@@ -711,13 +719,13 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             self.error(ERROR_INTERNAL_ERROR, _format_str(traceback.format_exc()))
 
     @privileged
-    def install_files(self, transaction_flags, files):
+    def install_files(self, transaction_flags, inst_files):
         """ Installs given package into system"""
 
         # FIXME: use only_trusted
 
         if TRANSACTION_FLAG_SIMULATE in transaction_flags:
-            for f in files:
+            for f in inst_files:
                 metadata, _ = pisi.api.info_file(f)
                 pkg_id = self.get_package_id(metadata.package.name, metadata.package.version, metadata.package.architecture, "local")
                 self.package(pkg_id, INFO_INSTALL, metadata.package.summary)
@@ -734,7 +742,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
         self.allow_cancel(False)
         try:
             # Actually install
-            pisi.api.install(files)
+            pisi.api.install(inst_files)
         except pisi.fetcher.FetchError as e:
             self.error(ERROR_PACKAGE_DOWNLOAD_FAILED, "Could not download package: %s" % e, exit=False)
         except IOError as e:
@@ -806,7 +814,7 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
 
     @privileged
     def remove_packages(self, transaction_flags, package_ids,
-                        allowdeps, autoremove):
+                        allowdep, autoremove):
         """ Removes given package from system"""
         self.allow_cancel(False)
         self.percentage(0)
@@ -859,39 +867,39 @@ class PackageKitPisiBackend(PackageKitBaseBackend, PackagekitPackage):
             self.error(ERROR_REPO_NOT_FOUND, "Repository %s was not found" % repoid)
 
     @privileged
-    def repo_set_data(self, repo_id, parameter, value):
+    def repo_set_data(self, repoid, parameter, value):
         """ Sets a parameter for the repository specified """
         self.allow_cancel(False)
         self.percentage(None)
 
         if parameter == "add-repo":
             try:
-                pisi.api.add_repo(repo_id, value)
+                pisi.api.add_repo(repoid, value)
             except pisi.Error as e:
                 self.error(ERROR_UNKNOWN, e)
 
             try:
-                pisi.api.update_repo(repo_id)
+                pisi.api.update_repo(repoid)
             except pisi.fetcher.FetchError:
-                pisi.api.remove_repo(repo_id)
+                pisi.api.remove_repo(repoid)
                 err = "Could not reach the repository, removing from system"
                 self.error(ERROR_REPO_NOT_FOUND, err)
         elif parameter == "remove-repo":
             try:
-                pisi.api.remove_repo(repo_id)
+                pisi.api.remove_repo(repoid)
             except pisi.Error:
                 self.error(ERROR_REPO_NOT_FOUND, "Repository does not exist")
         else:
             self.error(ERROR_NOT_SUPPORTED, "Valid parameters are add-repo and remove-repo")
 
-    def resolve(self, filters, packages):
+    def resolve(self, filters, values):
         """ Turns a single package name into a package_id
         suitable for the other methods """
         self.allow_cancel(True)
         self.percentage(None)
         self.status(STATUS_QUERY)
 
-        for package in packages:
+        for package in values:
             pkg = self.get_package_from_id(package)[0]
             try:
                 # FIXME: Hack for newest filter to work correctly (i think)
