@@ -35,22 +35,23 @@
 
 import os.path
 import re
+import subprocess
 from collections import Counter
+from contextlib import contextmanager
 from operator import attrgetter
 
 import pisi
 import pisi.api
+import pisi.atomicoperations
 import pisi.config
 import pisi.context
 import pisi.db
 import pisi.fetcher
 import pisi.ui
-import pisi.util
 from packagekit.backend import *
 from packagekit.enums import *
 from packagekit.package import PackagekitPackage
 from packagekit.progress import *
-from pisi.package import PackageResource
 
 
 def _format_str(text):
@@ -95,96 +96,32 @@ class SimplePisiHandler(pisi.ui.UI):
         progress = base_percent + (item_percent / 100.0) * slice_size
         self.base._set_percent(progress)
 
-    def display_progress(self, **kw):
-        operation = kw.get("operation")
-        percent = int(kw.get("percent", 0))
+    def run_usysconf(self, command):
+        """Run usysconf with its output suppressed.
 
-        if operation == "fetching_overall":
-            self.base._set_percent(percent)
+        The backend's stdout is parsed by packagekitd — any stray output
+        would cause "Failed to parse" errors. Report the final 10% of
+        the overall progress instead.
+        """
+        self.base._set_percent(90)
+        with open(os.devnull, "w") as devnull:
+            subprocess.run(command, shell=True, stdout=devnull, stderr=devnull)
 
-        elif operation == "fetching":
-            filename = kw.get("filename")
-            if filename and not filename.startswith("eopkg-index.xml"):
-                pkg_name = pisi.util.parse_package_name(filename)[0]
+    @contextmanager
+    def work_phase(self, num_items, op, *, total_units=None):
+        """Context manager wrapping a phase of work (parallel or sequential).
 
-                if pisi.db.packagedb.PackageDB().has_package(pkg_name):
-                    pkg = pisi.db.packagedb.PackageDB().get_package(pkg_name)
-                    self.base.item_progress(self.base._pkg_to_id(pkg), STATUS_DOWNLOAD, percent)
+        Drives PackageKit's `status`/`item_progress` callbacks directly
+        from the typed phase events — no re-translation into legacy
+        `notify`/`display_progress` calls.
 
-        elif operation == "extracting":
-            if self.cur_pkg and self.cur_status:
-                self.base.item_progress(
-                    self.base._pkg_to_id(self.cur_pkg), self.cur_status, percent
-                )
-            self._update_global_progress(percent)
-
-        elif operation == "indexing":
-            self.base._set_percent(percent)
-
-        else:
-            # Fallback for other operations
-            if self.packagestogo > 0:
-                self._update_global_progress(percent)
-            else:
-                self.base._set_percent(percent)
-
-    def notify(self, event, **keywords):
-        if event == pisi.ui.packagestogo:
-            self.packagestogo = len(keywords["order"])
-            self.currentpackage = 0
-
-        elif event == pisi.ui.downloading:
-            if not self.is_downloading:
-                self.is_downloading = True
-
-            pkg_resource: PackageResource = keywords["packageresource"]
-
-            if pisi.db.packagedb.PackageDB().has_package(pkg_resource.name):
-                pkg = pisi.db.packagedb.PackageDB().get_package(pkg_resource.name)
-                self.base.status(STATUS_DOWNLOAD)
-                self.base._set_status(pkg, INFO_DOWNLOADING)
-
-        elif event in (pisi.ui.installing, pisi.ui.upgrading):
-            if self.is_downloading:
-                self.is_downloading = False
-                self.currentpackage = 0
-
-            self.currentpackage += 1
-            self.cur_pkg = keywords["package"]
-            self.cur_status = STATUS_INSTALL if event == pisi.ui.installing else STATUS_UPDATE
-            info = INFO_INSTALLING if event == pisi.ui.installing else INFO_UPDATING
-
-            self.base.status(self.cur_status)
-            self.base._set_status(self.cur_pkg, info)
-            self.base.item_progress(self.base._pkg_to_id(self.cur_pkg), self.cur_status, 0)
-
-        elif event == pisi.ui.removing:
-            self.is_downloading = False
-            if self.currentpackage >= self.packagestogo:
-                self.currentpackage = 0
-            self.currentpackage += 1
-            self.cur_pkg = keywords["package"]
-            self.cur_status = STATUS_REMOVE
-            self.base.status(self.cur_status)
-            self.base._set_status(self.cur_pkg, INFO_REMOVING)
-            self.base.item_progress(self.base._pkg_to_id(self.cur_pkg), self.cur_status, 0)
-
-        elif event == pisi.ui.extracting:
-            self.cur_pkg = keywords.get("package", self.cur_pkg)
-            # Item progress and global percentage are now handled live in display_progress
-
-        elif event in (pisi.ui.installed, pisi.ui.upgraded, pisi.ui.removed):
-            status = STATUS_INSTALL
-            if event == pisi.ui.upgraded:
-                status = STATUS_UPDATE
-            if event == pisi.ui.removed:
-                status = STATUS_REMOVE
-
-            if self.cur_pkg:
-                self.base.item_progress(self.base._pkg_to_id(self.cur_pkg), status, 100)
-
-        elif event == pisi.ui.systemconf:
-            self.base._set_percent(90)
+        :param num_items: Total number of items in this phase; replaces the
+                          old packagestogo notification.
+        :param op: The :class:`~pisi.events.Operation` for the phase.
+        :param total_units: Optional definitive unit total (bytes for
+            downloads, files for operations) for the global percentage.
+        """
+        yield _PackageKitPhaseHandle(self, op, num_items, total_units=total_units)
 
 
 class PackageKitEopkgBackend(PackageKitBaseBackend, PackagekitPackage):
@@ -646,7 +583,6 @@ class PackageKitEopkgBackend(PackageKitBaseBackend, PackagekitPackage):
             histories = self._get_history_between(oldRelease, pkg)
 
             securities = [x for x in histories if x.type == "security"]
-            # FIXME: INFO_BUGFIX Support? We would have to match against #123 Github issues
             if len(securities) > 0:
                 self.package(id, INFO_SECURITY, pkg.summary)
             else:
@@ -683,9 +619,7 @@ class PackageKitEopkgBackend(PackageKitBaseBackend, PackagekitPackage):
                 # Note: installed pkgs do not record their repo of origin, assume it's the same for now
                 #       we could cross-examine but it's of little benefit
                 version = self.__get_package_version(current_pkg)
-                updates = self.get_package_id(
-                    current_pkg.name, version, current_pkg.architecture, data
-                )
+                updates = self.get_package_id(current_pkg.name, version, current_pkg.architecture, data)
             else:
                 updates = ""
 
@@ -699,8 +633,8 @@ class PackageKitEopkgBackend(PackageKitBaseBackend, PackagekitPackage):
 
             updated_date = pkg.history[0].date
 
-            bugURI = ""  # we would have to match against #123 which would be too fragile
-            changelog = ""  # we do not have an enforced standard for changelogs in commit msgs
+            bugURI = "" # we would have to match against #123 which would be too fragile
+            changelog = "" # we do not have an enforced standard for changelogs in commit msgs
 
             cvelist = re.findall(r"(CVE\-[0-9]+\-[0-9]+)", str(update_message))
             cves = ";".join(cvelist)
@@ -1087,9 +1021,159 @@ class PackageKitEopkgBackend(PackageKitBaseBackend, PackagekitPackage):
         except IOError as e:
             self.error(ERROR_NO_SPACE_ON_DEVICE, "Disk error: %s" % e)
         except pisi.Error as e:
-            self.error(ERROR_PACKAGE_FAILED_TO_INSTALL, "Could not update: %s" % e, exit=False)
+            self.error(
+                ERROR_PACKAGE_FAILED_TO_INSTALL, "Could not update: %s" % e, exit=False
+            )
         except Exception:
             self.error(ERROR_INTERNAL_ERROR, _format_str(traceback.format_exc()))
+
+
+class _PackageKitPhaseHandle(pisi.ui.PhaseHandle):
+    """Phase handle yielded by `SimplePisiHandler.work_phase`.
+
+    Emits PackageKit `status` / `item_progress` callbacks directly
+    from the typed phase events.
+    """
+
+    _EXTRACT_OPS = (
+        pisi.atomicoperations.Operation.INSTALL,
+        pisi.atomicoperations.Operation.REINSTALL,
+        pisi.atomicoperations.Operation.DOWNGRADE,
+        pisi.atomicoperations.Operation.UPGRADE,
+        pisi.atomicoperations.Operation.REMOVE,
+    )
+
+    def __init__(self, handler, op, num_items, *, total_units=None):
+        self.handler = handler
+        self.op = op
+        # The phase's item count is the number of packages in flight —
+        # this replaces the old packagestogo notification.
+        handler.packagestogo = num_items
+        handler.currentpackage = 0
+        if op == pisi.atomicoperations.Operation.DOWNLOAD:
+            handler.is_downloading = True
+        self._totals = {}
+        self._pkgs = {}
+        # Completed bytes per download item; persists after finish_item so
+        # the global aggregate reaches 100% once all downloads are done
+        # (mirrors the old fetching_overall byte-weighted callback).
+        self._completed = {}
+        # Definitive aggregate unit total (bytes for downloads); when None
+        # the per-item totals are summed instead.
+        self._total_units = total_units
+        # add_item fires once per unique item; _run_parallel re-fires it on
+        # every progress message, so a guard prevents the "started" events
+        # (status + 0%) from being re-emitted and resetting progress.
+        self._started = set()
+
+    def _resolve_pkg(self, pkg_info):
+        """Resolve the full package object behind a :class:`PkgInfo`.
+
+        Returns None when the package cannot be resolved (e.g. a local
+        file install), in which case progress events are skipped —
+        `_pkg_to_id` needs a full Package (architecture, build).
+        """
+        name = pkg_info.name
+        if pisi.db.packagedb.PackageDB().has_package(name):
+            return pisi.db.packagedb.PackageDB().get_package(name)
+        if pisi.db.installdb.InstallDB().has_package(name):
+            return pisi.db.installdb.InstallDB().get_package(name)
+        return None
+
+    @staticmethod
+    def _status_for(op):
+        """PackageKit status for an operation."""
+        if op == pisi.atomicoperations.Operation.UPGRADE:
+            return STATUS_UPDATE
+        if op == pisi.atomicoperations.Operation.REMOVE:
+            return STATUS_REMOVE
+        return STATUS_INSTALL
+
+    def add_item(self, item_name, total, *, pkg_info=None):
+        op = self.op
+        self._totals[item_name] = total
+        pkg = self._resolve_pkg(pkg_info) if pkg_info is not None else None
+        self._pkgs[item_name] = pkg
+        if item_name in self._started:
+            return  # progress-only re-fire; started events already sent
+        self._started.add(item_name)
+        h = self.handler
+
+        if op == pisi.atomicoperations.Operation.DOWNLOAD:
+            if not h.is_downloading:
+                h.is_downloading = True
+            if pkg is not None:
+                h.base.status(STATUS_DOWNLOAD)
+                h.base._set_status(pkg, INFO_DOWNLOADING)
+        elif op in (
+            pisi.atomicoperations.Operation.INSTALL,
+            pisi.atomicoperations.Operation.REINSTALL,
+            pisi.atomicoperations.Operation.DOWNGRADE,
+            pisi.atomicoperations.Operation.UPGRADE,
+        ):
+            if h.is_downloading:
+                h.is_downloading = False
+                h.currentpackage = 0
+
+            h.currentpackage += 1
+            h.cur_pkg = pkg
+            h.cur_status = self._status_for(op)
+            info = (
+                INFO_UPDATING
+                if op == pisi.atomicoperations.Operation.UPGRADE
+                else INFO_INSTALLING
+            )
+            if pkg is not None:
+                h.base.status(h.cur_status)
+                h.base._set_status(pkg, info)
+                h.base.item_progress(h.base._pkg_to_id(pkg), h.cur_status, 0)
+        elif op == pisi.atomicoperations.Operation.REMOVE:
+            if h.currentpackage >= h.packagestogo:
+                h.currentpackage = 0
+            h.currentpackage += 1
+            h.cur_pkg = pkg
+            h.cur_status = STATUS_REMOVE
+            if pkg is not None:
+                h.base.status(STATUS_REMOVE)
+                h.base._set_status(pkg, INFO_REMOVING)
+                h.base.item_progress(h.base._pkg_to_id(pkg), STATUS_REMOVE, 0)
+
+    def update_item(self, item_name, completed):
+        total = self._totals.get(item_name, 100)
+        pct = int(completed / total * 100) if total > 0 else 0
+        op = self.op
+        pkg = self._pkgs.get(item_name)
+        h = self.handler
+        if op == pisi.atomicoperations.Operation.DOWNLOAD:
+            if pkg is not None:
+                h.base.item_progress(h.base._pkg_to_id(pkg), STATUS_DOWNLOAD, pct)
+            # Global percentage: aggregate byte progress across concurrent
+            # downloads, using the phase's fixed byte total when known.
+            self._completed[item_name] = completed
+            total = self._total_units or sum(self._totals.values())
+            if total > 0:
+                h.base._set_percent(
+                    int(sum(self._completed.values()) * 100.0 / total)
+                )
+        elif op in self._EXTRACT_OPS:
+            # Attribute progress to the item's own package — with parallel
+            # workers a single cur_pkg slot would misattribute updates.
+            if pkg is not None:
+                h.base.item_progress(h.base._pkg_to_id(pkg), self._status_for(op), pct)
+            h._update_global_progress(pct)
+        else:
+            # Phases without package bookkeeping (snapshot, …): set the
+            # overall percent directly.
+            h.base._set_percent(pct)
+
+    def finish_item(self, item_name):
+        op = self.op
+        pkg = self._pkgs.pop(item_name, None)
+        if pkg is None or op not in self._EXTRACT_OPS:
+            return
+        self.handler.base.item_progress(
+            self.handler.base._pkg_to_id(pkg), self._status_for(op), 100
+        )
 
 
 def main():
